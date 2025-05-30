@@ -1,7 +1,5 @@
 # AI Crowd Monitoring System - State-of-the-Art Architecture
 
-## 🏆 **BEST MODELS SELECTION (Based on 2024-2025 Research)**
-
 ### ✅ **RECOMMENDED MODELS (Superior to NVIDIA Models)**
 
 #### 1. **PRIMARY OBJECT DETECTION: YOLOv11 (Latest & Best)**
