@@ -179,31 +179,31 @@
 │                         IMPLEMENTATION TIMELINE                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
-🗓️ **Phase 1 (Days 1-2): Foundation**
+🗓️ **Phase 1: Foundation**
 ├── Basic HTML interface with webcam access
 ├── OpenCV video capture and display
 ├── Flask backend with WebSocket support
 └── SQLite database setup
 
-🗓️ **Phase 2 (Days 3-4): Core Detection**
+🗓️ **Phase 2: Core Detection**
 ├── YOLOv11 integration for person detection
 ├── MediaPipe face detection
 ├── Basic overlay rendering on video
 └── Real-time bounding box display
 
-🗓️ **Phase 3 (Days 5-6): Advanced AI**
+🗓️ **Phase 3: Advanced AI**
 ├── X3D action recognition integration  
 ├── CSRNet crowd counting
 ├── ArcFace face recognition setup
 └── Suspicious activity scoring algorithm
 
-🗓️ **Phase 4 (Days 7-8): Intelligence Layer**
+🗓️ **Phase 4: Intelligence Layer**
 ├── SmolVLM integration with llama.cpp
 ├── Real-time activity logging
 ├── Alert system with thresholds
 └── Performance optimization with TensorRT
 
-🗓️ **Phase 5 (Day 9): Polish & Demo**
+🗓️ **Phase 5: Polish & Demo**
 ├── UI improvements and styling
 ├── Demo video creation
 ├── Documentation and setup instructions
@@ -224,7 +224,7 @@
 - **End-to-End Pipeline:** Seamless data flow from video to alerts
 - **Scalable Architecture:** Easy to add more models or features
 
-### **Hackathon Success Factors:**
+### **Success Factors:**
 - **Real-time Demo:** Impressive live detection and alerts
 - **Multiple AI Modalities:** Computer vision + NLP + behavior analysis
 - **Practical Application:** Clear public safety use case
