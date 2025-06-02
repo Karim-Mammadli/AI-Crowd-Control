@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Crowd Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 AI Crowd Monitoring System</h1>
+            <p>Real-time person & face detection powered by YOLOv8 + MediaPipe</p>
+            <div class="model-status" id="modelStatus">
+                🤖 Models: Ready to load | 👥 Person Detection + 👤 Face Detection
+            </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="progress-container" id="progressContainer">
+            <h3>🔄 Loading AI Models</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+            <div class="progress-step" id="progressStep">Initializing...</div>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn" class="start-btn" onclick="startMonitoring()">
+                Start Monitoring
+            </button>
+            <button id="stopBtn" class="stop-btn" onclick="stopMonitoring()" disabled>
+                Stop Monitoring
+            </button>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div class="main-content">
+            <div class="video-section">
+                <h3>📹 Live Video Feed</h3>
+                <div class="video-container">
+                    <video id="video" autoplay playsinline muted></video>
+                    <canvas id="overlay"></canvas>
+                </div>
+                <p><small>🎯 Green boxes: People | Blue boxes: Faces</small></p>
+            </div>
+            
+            <div class="stats-section">
+                <h3>📊 Live Detection Statistics</h3>
+                
+                <div class="stat-item">
+                    <div class="stat-label">👥 People Count</div>
+                    <div class="stat-value" id="peopleCount">0</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-label">👤 Face Count</div>
+                    <div class="stat-value" id="faceCount">0</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-label">🏢 Crowd Density</div>
+                    <div class="stat-value" id="crowdDensity">EMPTY</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-label">🚨 Alert Level</div>
+                    <div class="stat-value alert-normal" id="alertLevel">NORMAL</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-label">⚙️ System Status</div>
+                    <div class="stat-value" id="systemStatus">Ready</div>
+                </div>
+                
+                <div class="activity-log">
+                    <h4>📝 Activity Log</h4>
+                    <div id="activityLog">
+                        <div class="activity-item">System initialized - ready to start monitoring</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/app.js"></script>
+</body>
+</html>

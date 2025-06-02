@@ -1,0 +1,28 @@
+ # Updated requirements.txt - Latest versions with MediaPipe
+
+# Web Framework (Latest)
+flask>=3.0.0
+flask-socketio>=5.4.0
+
+# Computer Vision & AI (Latest)
+opencv-python>=4.9.0
+ultralytics>=8.3.0
+torch>=2.4.0
+torchvision>=0.19.0
+
+# Face Detection (Latest)
+mediapipe>=0.10.14
+
+# Video Enhancement (Latest - uncomment when needed)
+# realesrgan>=0.3.0
+
+# Data Processing (Latest)
+numpy>=2.0.0
+pillow>=11.0.0
+
+# Utils (Latest)
+python-engineio>=4.9.0
+python-socketio>=5.11.0
+
+# Optional: For better performance
+# tensorrt>=10.0.0  # Requires NVIDIA GPU
