@@ -1,5 +1,4 @@
- # src/utils/video_processor.py - Fixed Version
-import cv2
+import cv2  # type: ignore
 import threading
 import time
 from datetime import datetime
@@ -57,8 +56,8 @@ class VideoProcessor:
             
             # Set resolution (try multiple options)
             resolutions = [
-                (1280, 720),  # HD
                 (640, 480),   # VGA
+                (1280, 720),  # HD
                 (320, 240),   # QVGA
             ]
             
@@ -81,20 +80,31 @@ class VideoProcessor:
             
             # Set buffer size to reduce latency
             self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+            # Camera warm-up
+            print("⏳ Warming up camera...")
+            time.sleep(2.0)    # Give camera 2 seconds to initialize
+            for _ in range(10):   # Flush initial frames
+                self.cap.read()
             
             # Test frame capture
             print("🧪 Testing frame capture...")
-            for attempt in range(5):
+            time.sleep(1.0)  # Add 1 second delay for camera to warm up
+
+            for attempt in range(10):  # Increase attempts to 10
                 ret, test_frame = self.cap.read()
                 if ret and test_frame is not None:
                     print(f"✅ Test frame captured: {test_frame.shape}")
+                    # ADD: Flush camera buffer
+                    for _ in range(5):
+                        self.cap.grab()  # clear buffer
                     self.is_running = True
                     self.frame_ready = True
                     print(f"✅ Camera started successfully (ID: {self.camera_id})")
                     return True
                 else:
                     print(f"⚠️ Test attempt {attempt + 1} failed, retrying...")
-                    time.sleep(0.2)
+                    time.sleep(0.5)  # retry delay is now 0.5 seconds
             
             raise Exception("Camera test failed - no frames captured")
             

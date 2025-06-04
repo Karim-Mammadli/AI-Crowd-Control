@@ -1,28 +1,35 @@
- # Updated requirements.txt - Latest versions with MediaPipe
+# Core Framework
+Flask==3.0.0
+Flask-SocketIO==5.3.6
 
-# Web Framework (Latest)
-flask>=3.0.0
-flask-socketio>=5.4.0
+# AI/ML Libraries
+ultralytics==8.3.0
+mediapipe==0.10.14
+torch>=2.0.0
+torchvision>=0.15.0
 
-# Computer Vision & AI (Latest)
-opencv-python>=4.9.0
-ultralytics>=8.3.0
-torch>=2.4.0
-torchvision>=0.19.0
+# Computer Vision
+opencv-python==4.10.0.84
+Pillow==10.4.0
 
-# Face Detection (Latest)
-mediapipe>=0.10.14
+# Scientific Computing
+numpy>=1.24.0
+scipy>=1.10.0
 
-# Video Enhancement (Latest - uncomment when needed)
-# realesrgan>=0.3.0
+# File Handling & Security
+Werkzeug==3.0.1
+secure-filename>=0.1
 
-# Data Processing (Latest)
-numpy>=2.0.0
-pillow>=11.0.0
+# Web & Networking
+python-socketio==5.11.0
+python-engineio==4.9.0
+eventlet==0.36.1
 
-# Utils (Latest)
-python-engineio>=4.9.0
-python-socketio>=5.11.0
+# Utilities
+python-dotenv==1.0.1
+tqdm>=4.65.0
+psutil>=5.9.0
 
-# Optional: For better performance
-# tensorrt>=10.0.0  # Requires NVIDIA GPU
+# Optional GPU Support (uncomment if using CUDA)
+# torch>=2.0.0+cu118 --index-url https://download.pytorch.org/whl/cu118
+# torchvision>=0.15.0+cu118 --index-url https://download.pytorch.org/whl/cu118

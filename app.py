@@ -1,12 +1,17 @@
 import os
 import sys
 import warnings
+import cv2
+import numpy as np
+from werkzeug.utils import secure_filename
+import base64
+import tempfile
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore', category=UserWarning, module='mediapipe')
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO, emit
 import threading
 import time
@@ -17,23 +22,41 @@ import signal
 # Import detection modules
 def load_detection_modules():
     try:
-        from src.detection.yolo_detector import YOLODetector
+        from src.detection.yolo_detector import YOLODetector, YOLOFaceDetector
         from src.detection.face_detector import FaceDetector
         from src.utils.video_processor import VideoProcessor
-        return YOLODetector, FaceDetector, VideoProcessor
+        return YOLODetector, FaceDetector, VideoProcessor, YOLOFaceDetector
     except ImportError as e:
         print(f"Warning: Could not import detection modules: {e}")
-        return None, None, None
+        return None, None, None, None
 
 app = Flask(__name__, static_folder='static')
-app.config['SECRET_KEY'] = 'your-secret-key-change-this'
-socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
+# app.config['SECRET_KEY'] = 'your-secret-key-change-this'
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
+socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False, max_http_buffer_size=100*1024*1024)
+
+# Create upload directories
+UPLOAD_FOLDER = 'uploads'
+PROCESSED_FOLDER = 'processed'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+
+ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webm'}
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'bmp', 'webp'}
+
+def allowed_file(filename, file_type):
+    if file_type == 'video':
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
+    elif file_type == 'image':
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+    return False
 
 class CrowdMonitoringSystem:
     def __init__(self):
         self.is_monitoring = False
         self.is_initializing = False
         self.models_loaded = False
+        self.processing_mode = 'camera'  # 'camera', 'video', 'image'
         
         # AI Models
         self.video_processor = None
@@ -45,17 +68,21 @@ class CrowdMonitoringSystem:
         self._stop_event = threading.Event()
         self._initialization_lock = threading.Lock()
         
+        # File processing
+        self.current_video_path = None
+        self.current_image_path = None
+        
         # Statistics
         self.stats = {
             'person_count': 0,
             'face_count': 0,
             'crowd_density': 'EMPTY',
             'alert_level': 'NORMAL',
-            'last_activity': 'System ready - click Start to begin monitoring',
+            'last_activity': 'System ready - upload a file or use camera',
             'system_status': 'Ready'
         }
         
-        print("🚀 AI Crowd Monitoring System initialized")
+        print("🚀 AI Crowd Monitoring System initialized with file upload support")
     
     def update_progress(self, step, total, message):
         """Update loading progress bar."""
@@ -86,12 +113,12 @@ class CrowdMonitoringSystem:
                 
                 # Step 1: Import modules
                 self.update_progress(1, total_steps, "Importing detection modules...")
-                YOLODetector, FaceDetector, VideoProcessor = load_detection_modules()
-                if None in [YOLODetector, FaceDetector, VideoProcessor]:
+                YOLODetector, FaceDetector, VideoProcessor, YOLOFaceDetector = load_detection_modules()
+                if None in [YOLODetector, FaceDetector, VideoProcessor, YOLOFaceDetector]:
                     raise ImportError("Detection modules not available")
                 
-                # Step 2: Initialize video processor
-                self.update_progress(2, total_steps, "Initializing camera system...")
+                # Step 2: Initialize video processor (for camera if needed)
+                self.update_progress(2, total_steps, "Initializing video processor...")
                 print("🎥 Initializing video processor...")
                 self.video_processor = VideoProcessor()
                 
@@ -101,12 +128,20 @@ class CrowdMonitoringSystem:
                 self.yolo_detector = YOLODetector('yolov8n.pt')
                 
                 # Step 4: Load MediaPipe model
-                self.update_progress(4, total_steps, "Loading MediaPipe face detection model...")
-                print("👤 Loading MediaPipe face detection...")
-                self.face_detector = FaceDetector(confidence_threshold=0.5)
+                self.update_progress(4, total_steps, "Loading face detection model... (line 140 for which one")
+                print("👤 Loading face detection... (line 140 for which one)")
+                
+                # Lowering it (e.g., 0.3) might detect more faces but increase false positives
+                # raising it (e.g., 0.7) might reduce false positives but miss some faces
+
+                # DEFAULT Face Detector WITH MEDIAPIPE
+                # self.face_detector = FaceDetector(confidence_threshold=0.5)
+
+                # ALTERNATIVE Face Detector WITH YOLO
+                self.face_detector = YOLOFaceDetector('yolov8n.pt')
                 
                 # Step 5: Complete
-                self.update_progress(5, total_steps, "All AI models loaded successfully!")
+                self.update_progress(5, total_steps, "All AI models loaded - ready for processing!")
                 print("✅ All models loaded successfully!")
                 
                 socketio.emit('system_status', {
@@ -128,156 +163,203 @@ class CrowdMonitoringSystem:
                 self.models_loaded = False
                 return False
     
-    def start_monitoring(self):
-        print(f"🔄 Start monitoring requested")
-        
-        if self.is_monitoring:
-            return {'success': False, 'message': 'Already monitoring'}
-        
-        if self.is_initializing:
-            return {'success': False, 'message': 'Still initializing...'}
-        
-        # Initialize models if needed
+    def process_image(self, image_path):
+        """Process a single image and return results."""
         if not self.models_loaded:
-            socketio.emit('system_status', {'status': 'loading', 'message': 'Loading AI models...'})
-            if not self.initialize_models():
-                return {'success': False, 'message': 'Model initialization failed'}
+            return {'success': False, 'message': 'Models not loaded'}
         
-        # Start video capture
-        print("🎥 Starting video capture...")
-        if not self.video_processor.start_capture():
-            return {'success': False, 'message': 'Camera access failed - check camera permissions'}
-        
-        # Verify camera is working
-        print("🧪 Testing camera frames...")
-        test_attempts = 0
-        while test_attempts < 10:
-            test_frame = self.video_processor.get_frame()
-            if test_frame is not None:
-                print(f"✅ Camera test successful - frame shape: {test_frame.shape}")
-                break
-            test_attempts += 1
-            time.sleep(0.1)
-        
-        if test_attempts >= 10:
-            self.video_processor.stop_capture()
-            return {'success': False, 'message': 'Camera test failed - no frames received'}
-        
-        # Start monitoring
-        self._stop_event.clear()
-        self.is_monitoring = True
-        self.processing_thread = threading.Thread(target=self.process_video_loop, daemon=True)
-        self.processing_thread.start()
-        
-        print("✅ Monitoring started successfully")
-        return {'success': True, 'message': 'Monitoring started - AI detection active'}
+        try:
+            print(f"🖼️ Processing image: {image_path}")
+            
+            # Load image
+            frame = cv2.imread(image_path)
+            if frame is None:
+                return {'success': False, 'message': 'Could not load image'}
+            
+            print(f"📷 Image shape: {frame.shape}")
+            
+            # Run detections
+            person_detections = self.yolo_detector.detect_persons(frame)
+            face_detections = self.face_detector.detect_faces(frame)
+            
+            print(f"👥 Found {len(person_detections)} people")
+            print(f"👤 Found {len(face_detections)} faces")
+            
+            # Draw detections on image
+            result_frame = frame.copy()
+            
+            # Draw person boxes (green)
+            for detection in person_detections:
+                bbox = detection['bbox']
+                conf = detection['confidence']
+                cv2.rectangle(result_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
+                label = f"Person: {conf:.2f}"
+                cv2.putText(result_frame, label, (bbox[0], bbox[1] - 10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            
+            # Draw face boxes (blue)
+            for detection in face_detections:
+                bbox = detection['bbox']
+                conf = detection['confidence']
+                cv2.rectangle(result_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
+                label = f"Face: {conf:.2f}"
+                cv2.putText(result_frame, label, (bbox[0], bbox[1] - 10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            
+            # Save processed image
+            filename = os.path.basename(image_path)
+            processed_path = os.path.join(PROCESSED_FOLDER, f"processed_{filename}")
+            cv2.imwrite(processed_path, result_frame)
+            
+            # Convert to base64 for frontend display
+            _, buffer = cv2.imencode('.jpg', result_frame)
+            img_base64 = base64.b64encode(buffer).decode('utf-8')
+            
+            # Update stats
+            self.stats.update({
+                'person_count': len(person_detections),
+                'face_count': len(face_detections),
+                'crowd_density': self.calculate_crowd_density(len(person_detections)),
+                'alert_level': self.calculate_alert_level(len(person_detections), len(face_detections)),
+                'last_activity': f"Processed image: {len(person_detections)} people, {len(face_detections)} faces detected",
+                'timestamp': datetime.now().isoformat(),
+                'person_detections': person_detections,
+                'face_detections': face_detections,
+                'system_status': 'Image Processed'
+            })
+            
+            return {
+                'success': True,
+                'processed_image': img_base64,
+                'processed_path': processed_path,
+                'stats': self.stats
+            }
+            
+        except Exception as e:
+            print(f"❌ Image processing error: {e}")
+            return {'success': False, 'message': str(e)}
     
-    def stop_monitoring(self):
-        print(f"🛑 Stop monitoring requested")
+    def process_video(self, video_path):
+        """Process video and emit real-time updates."""
+        if not self.models_loaded:
+            return {'success': False, 'message': 'Models not loaded'}
         
-        if not self.is_monitoring:
-            return {'success': True, 'message': 'Not monitoring'}
-        
-        self._stop_event.set()
-        self.is_monitoring = False
-        
-        if self.video_processor:
-            self.video_processor.stop_capture()
-        
-        if self.processing_thread:
-            self.processing_thread.join(timeout=3.0)
-        
-        # Reset stats
-        self.stats.update({
-            'person_count': 0,
-            'face_count': 0,
-            'crowd_density': 'EMPTY',
-            'alert_level': 'NORMAL',
-            'last_activity': 'Monitoring stopped',
-            'system_status': 'Ready',
-            'person_detections': [],
-            'face_detections': []
-        })
-        
-        socketio.emit('detection_update', self.stats)
-        print("✅ Monitoring stopped")
-        return {'success': True, 'message': 'Monitoring stopped'}
-    
-    def process_video_loop(self):
-        frame_count = 0
-        last_emit_time = time.time()
-        consecutive_failures = 0
-        
-        print("🎥 === VIDEO PROCESSING LOOP STARTED ===")
-        
-        while self.is_monitoring and not self._stop_event.is_set():
-            try:
-                # Get frame
-                frame = self.video_processor.get_frame()
+        try:
+            print(f"🎬 Processing video: {video_path}")
+            
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                return {'success': False, 'message': 'Could not open video'}
+            
+            # Get video properties
+            fps = int(cap.get(cv2.CAP_PROP_FPS))
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            
+            print(f"📹 Video: {width}x{height}, {fps} FPS, {frame_count} frames")
+            
+            # Prepare output video
+            filename = os.path.basename(video_path)
+            processed_path = os.path.join(PROCESSED_FOLDER, f"processed_{filename}")
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(processed_path, fourcc, fps, (width, height))
+            
+            self.is_monitoring = True
+            frame_num = 0
+            
+            while self.is_monitoring:
+                ret, frame = cap.read()
+                if not ret:
+                    break
                 
-                if frame is None:
-                    consecutive_failures += 1
-                    if consecutive_failures % 50 == 0:  # Log every 50 failures
-                        print(f"⚠️ No frames for {consecutive_failures} attempts")
-                    time.sleep(0.05)
-                    continue
+                frame_num += 1
                 
-                # Reset failure counter on success
-                if consecutive_failures > 0:
-                    print(f"✅ Frame capture resumed after {consecutive_failures} failures")
-                    consecutive_failures = 0
-                
-                frame_count += 1
-                
-                # Process every 10th frame for debugging (3 FPS effective)
-                if frame_count % 10 == 0:
-                    print(f"\n🔍 === PROCESSING FRAME {frame_count} ===")
-                    print(f"📷 Frame shape: {frame.shape}")
+                # Process frames in batches of 10
+                if frame_num % 10 == 0:
+                    print(f"🔍 Processing batch at frame {frame_num}/{frame_count}")
                     
-                    # Run YOLO detection
-                    print("🔄 Running YOLO detection...")
+                    # Run detections with improved parameters
                     person_detections = self.yolo_detector.detect_persons(frame)
-                    print(f"👥 YOLO result: {len(person_detections)} people")
-                    
-                    # Run MediaPipe detection
-                    print("🔄 Running MediaPipe detection...")
                     face_detections = self.face_detector.detect_faces(frame)
-                    print(f"👤 MediaPipe result: {len(face_detections)} faces")
                     
-                    person_count = len(person_detections)
-                    face_count = len(face_detections)
+                    # Get timestamp in seconds
+                    timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+
+                    # Emit detection results for this frame
+                    socketio.emit('video_detection', {
+                        'frame_index': frame_num,
+                        'timestamp': timestamp,
+                        'person_detections': person_detections,
+                        'face_detections': face_detections
+                    })
                     
-                    # Update stats
+                    # Update progress
+                    progress = int((frame_num / frame_count) * 100)
+                    socketio.emit('video_progress', {
+                        'progress': progress,
+                        'frame': frame_num,
+                        'total_frames': frame_count,
+                        'message': f"Processing batch at frame {frame_num}/{frame_count}"
+                    })
+                    
+                    # Update stats and emit to frontend
                     self.stats.update({
-                        'person_count': person_count,
-                        'face_count': face_count,
-                        'crowd_density': self.calculate_crowd_density(person_count),
-                        'alert_level': self.calculate_alert_level(person_count, face_count),
-                        'last_activity': self.generate_activity_description(person_count, face_count),
+                        'person_count': len(person_detections),
+                        'face_count': len(face_detections),
+                        'crowd_density': self.calculate_crowd_density(len(person_detections)),
+                        'alert_level': self.calculate_alert_level(len(person_detections), len(face_detections)),
+                        'last_activity': f"Frame {frame_num}: {len(person_detections)} people, {len(face_detections)} faces",
                         'timestamp': datetime.now().isoformat(),
                         'person_detections': person_detections,
                         'face_detections': face_detections,
-                        'system_status': 'Monitoring Active'
+                        'system_status': 'Processing Video'
                     })
                     
-                    print(f"📊 Final stats: people={person_count}, faces={face_count}")
-                    
-                    # Emit to frontend
-                    current_time = time.time()
-                    if current_time - last_emit_time >= 1.0:  # 1 FPS for UI updates
-                        socketio.emit('detection_update', self.stats)
-                        print(f"✅ Data sent to frontend")
-                        last_emit_time = current_time
-                    
-                    print(f"🔍 === FRAME {frame_count} COMPLETE ===\n")
+                    socketio.emit('detection_update', self.stats)
                 
-            except Exception as e:
-                print(f"❌ Processing error: {e}")
-                time.sleep(0.1)
+                # Draw detections on frame (for every frame)
+                result_frame = frame.copy()
+                
+                # Draw person boxes
+                for detection in person_detections if frame_num % 10 == 0 else []:
+                    bbox = detection['bbox']
+                    conf = detection['confidence']
+                    cv2.rectangle(result_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
+                    label = f"Person: {conf:.2f}"
+                    cv2.putText(result_frame, label, (bbox[0], bbox[1] - 10), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
+                # Draw face boxes
+                for detection in face_detections if frame_num % 10 == 0 else []:
+                    bbox = detection['bbox']
+                    conf = detection['confidence']
+                    cv2.rectangle(result_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
+                    label = f"Face: {conf:.2f}"
+                    cv2.putText(result_frame, label, (bbox[0], bbox[1] - 10), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                
+                # Write frame to output video
+                out.write(result_frame)
+                
+                # Small delay for real-time feel
+                time.sleep(0.033)  # ~30 FPS
             
-            time.sleep(0.033)  # ~30 FPS capture rate
-        
-        print("🏁 === VIDEO PROCESSING LOOP ENDED ===")
+            cap.release()
+            out.release()
+            
+            print(f"✅ Video processing complete: {processed_path}")
+            
+            return {
+                'success': True,
+                'processed_path': processed_path,
+                'total_frames': frame_count,
+                'message': f'Video processed successfully: {frame_count} frames'
+            }
+            
+        except Exception as e:
+            print(f"❌ Video processing error: {e}")
+            return {'success': False, 'message': str(e)}
     
     def calculate_crowd_density(self, person_count):
         if person_count == 0:
@@ -300,21 +382,10 @@ class CrowdMonitoringSystem:
         else:
             return 'ALERT'
     
-    def generate_activity_description(self, person_count, face_count):
-        if person_count == 0 and face_count == 0:
-            return "No detections - area appears empty"
-        elif person_count == 0 and face_count > 0:
-            return f"{face_count} face(s) detected - partial person visibility"
-        elif person_count > 0 and face_count == 0:
-            return f"{person_count} person(s) detected - faces not clearly visible"
-        else:
-            return f"{person_count} person(s), {face_count} face(s) detected - good visibility"
-    
-    def cleanup(self):
-        print("🧹 Cleaning up...")
-        self.stop_monitoring()
-        if self.face_detector:
-            self.face_detector.cleanup()
+    def stop_processing(self):
+        """Stop any ongoing processing."""
+        self.is_monitoring = False
+        print("🛑 Processing stopped")
 
 # Global system
 monitor_system = CrowdMonitoringSystem()
@@ -332,24 +403,111 @@ def css_files(filename):
 def js_files(filename):
     return send_from_directory('static/js', filename)
 
-# WebSocket handlers
-@socketio.on('start_monitoring')
-def handle_start_monitoring():
-    print("📨 WebSocket: start_monitoring received")
-    result = monitor_system.start_monitoring()
-    emit('monitoring_status', {
-        'active': result['success'], 
-        'message': result['message']
-    })
+# File upload routes
+@app.route('/upload_image', methods=['POST'])
+def upload_image():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'No file uploaded'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'No file selected'})
+        
+        if not allowed_file(file.filename, 'image'):
+            return jsonify({'success': False, 'message': 'Invalid file type. Use JPG, PNG, BMP, or WEBP'})
+        
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{filename}"
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        
+        print(f"📁 Image uploaded: {file_path}")
+        
+        # Initialize models if needed
+        if not monitor_system.models_loaded:
+            if not monitor_system.initialize_models():
+                return jsonify({'success': False, 'message': 'Failed to initialize AI models'})
+        
+        # Process image
+        result = monitor_system.process_image(file_path)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': 'Image processed successfully',
+                'processed_image': result['processed_image'],
+                'stats': result['stats']
+            })
+        else:
+            return jsonify(result)
+        
+    except Exception as e:
+        print(f"❌ Upload error: {e}")
+        return jsonify({'success': False, 'message': str(e)})
 
-@socketio.on('stop_monitoring')
-def handle_stop_monitoring():
-    print("📨 WebSocket: stop_monitoring received")
-    result = monitor_system.stop_monitoring()
-    emit('monitoring_status', {
-        'active': False, 
-        'message': result['message']
-    })
+@app.route('/upload_video', methods=['POST'])
+def upload_video():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'message': 'No file uploaded'})
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'No file selected'})
+        
+        if not allowed_file(file.filename, 'video'):
+            return jsonify({'success': False, 'message': 'Invalid file type. Use MP4, AVI, MOV, MKV, or WEBM'})
+        
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{filename}"
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        
+        print(f"📁 Video uploaded: {file_path}")
+        
+        # Initialize models if needed
+        if not monitor_system.models_loaded:
+            if not monitor_system.initialize_models():
+                return jsonify({'success': False, 'message': 'Failed to initialize AI models'})
+        
+        return jsonify({
+            'success': True,
+            'message': 'Video uploaded successfully - processing will start',
+            'file_path': file_path
+        })
+        
+    except Exception as e:
+        print(f"❌ Upload error: {e}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(PROCESSED_FOLDER, filename, as_attachment=True)
+
+# WebSocket handlers
+@socketio.on('start_video_processing')
+def handle_start_video_processing(data):
+    video_path = data.get('file_path')
+    print(f"📨 Starting video processing: {video_path}")
+    
+    # Process video in background thread
+    def process_video_background():
+        result = monitor_system.process_video(video_path)
+        emit('video_processing_complete', result)
+    
+    thread = threading.Thread(target=process_video_background, daemon=True)
+    thread.start()
+
+@socketio.on('stop_processing')
+def handle_stop_processing():
+    print("📨 Stop processing requested")
+    monitor_system.stop_processing()
+    emit('processing_stopped', {'message': 'Processing stopped'})
 
 @socketio.on('connect')
 def handle_connect():
@@ -361,14 +519,13 @@ def handle_disconnect():
     print("🔌 WebSocket: Client disconnected")
 
 if __name__ == '__main__':
-    print("🚀 Starting AI Crowd Monitoring System...")
-    print("🔧 Backend only - separated frontend files")
+    print("🚀 Starting AI Crowd Monitoring System with File Upload...")
     print("📋 Open browser to: http://localhost:5000")
-    print("🔧 Watch console for detection logs")
+    print("📁 Upload videos/images instead of using camera")
     print("🛑 Press Ctrl+C to stop")
     
     try:
         socketio.run(app, debug=False, host='0.0.0.0', port=5000, log_output=False)
     except KeyboardInterrupt:
         print("\n🛑 Shutting down...")
-        monitor_system.cleanup()
+        monitor_system.stop_processing()

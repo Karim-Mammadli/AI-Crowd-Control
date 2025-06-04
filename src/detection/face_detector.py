@@ -8,7 +8,7 @@ import os
 os.environ['GLOG_minloglevel'] = '2'
 
 class FaceDetector:
-    def __init__(self, confidence_threshold=0.5):
+    def __init__(self, confidence_threshold=0.3):
         """Initialize MediaPipe face detector with debugging."""
         print(f"🔄 Initializing MediaPipe face detector (confidence: {confidence_threshold})")
         
@@ -19,23 +19,23 @@ class FaceDetector:
             
             # Initialize with optimized settings
             self.face_detection = self.mp_face_detection.FaceDetection(
-                model_selection=0,  # 0 = short-range (faster)
+                model_selection=1,   # 0 = short-range (faster)   1 = long-range (slower 5 meters)
                 min_detection_confidence=confidence_threshold
             )
             
             print(f"✅ MediaPipe Face Detection initialized successfully")
             
-            # Test with dummy image
-            print("🧪 Testing MediaPipe with dummy image...")
-            dummy_img = np.zeros((480, 640, 3), dtype=np.uint8)
-            # Add a simple face-like pattern for testing
-            cv2.circle(dummy_img, (320, 240), 50, (255, 255, 255), -1)  # Face
-            cv2.circle(dummy_img, (300, 220), 10, (0, 0, 0), -1)        # Left eye
-            cv2.circle(dummy_img, (340, 220), 10, (0, 0, 0), -1)        # Right eye
+            # # Test with dummy image
+            # print("🧪 Testing MediaPipe with dummy image...")
+            # dummy_img = np.zeros((480, 640, 3), dtype=np.uint8)
+            # # Add a simple face-like pattern for testing
+            # cv2.circle(dummy_img, (320, 240), 50, (255, 255, 255), -1)  # Face
+            # cv2.circle(dummy_img, (300, 220), 10, (0, 0, 0), -1)        # Left eye
+            # cv2.circle(dummy_img, (340, 220), 10, (0, 0, 0), -1)        # Right eye
             
-            rgb_dummy = cv2.cvtColor(dummy_img, cv2.COLOR_BGR2RGB)
-            test_results = self.face_detection.process(rgb_dummy)
-            print(f"✅ MediaPipe test completed")
+            # rgb_dummy = cv2.cvtColor(dummy_img, cv2.COLOR_BGR2RGB)
+            # test_results = self.face_detection.process(rgb_dummy)
+            # print(f"✅ MediaPipe test completed")
             
         except Exception as e:
             print(f"❌ MediaPipe initialization error: {e}")
