@@ -33,3 +33,6 @@ psutil>=5.9.0
 # Optional GPU Support (uncomment if using CUDA)
 # torch>=2.0.0+cu118 --index-url https://download.pytorch.org/whl/cu118
 # torchvision>=0.15.0+cu118 --index-url https://download.pytorch.org/whl/cu118
+
+# Add to your existing requirements.txt:
+mlflow>=2.0.0

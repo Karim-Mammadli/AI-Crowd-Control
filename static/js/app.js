@@ -357,7 +357,8 @@ function displayImageResults(data, originalFile) {
     
     // Show download option
     showDownloadSection(true);
-    currentProcessedFile = data.stats.processed_path;
+    // Use the processed_filename provided by the backend
+    currentProcessedFile = data.processed_filename || data.processed_path.split('/').pop();
     
     // Update UI
     document.getElementById('mediaTitle').textContent = '📷 Image Analysis Complete';
@@ -382,7 +383,7 @@ function handleVideoProcessingComplete(data) {
         
         // Show download option
         showDownloadSection(true);
-        currentProcessedFile = data.processed_path;
+        currentProcessedFile = data.processed_path.split('/').pop();
         
         // Hide video progress bar
         const videoProgressContainer = document.getElementById('videoProgressContainer');
@@ -706,7 +707,7 @@ function showDownloadSection(show) {
 
 function downloadResults() {
     if (currentProcessedFile) {
-        const filename = currentProcessedFile.split('/').pop();
+        const filename = currentProcessedFile;
         const downloadUrl = `/download/${filename}`;
         console.log('💾 Downloading processed file:', downloadUrl);
         

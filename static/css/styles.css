@@ -419,35 +419,52 @@ button:disabled {
 
 /* Download Section */
 .download-section {
-    margin-top: 20px;
-    padding: 15px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    padding: 20px;
+    border-radius: 15px;
+    margin: 20px 0;
     text-align: center;
-    animation: slideUp 0.3s ease;
+    backdrop-filter: blur(10px);
+    animation: slideUp 0.3s ease-out;
 }
 
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+.download-section h4 {
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    color: #fff;
 }
 
 .download-btn {
-    background: linear-gradient(45deg, #28a745, #20c997);
+    background: linear-gradient(45deg, #4CAF50, #45a049);
     color: white;
     padding: 12px 24px;
     border: none;
     border-radius: 8px;
+    font-size: 16px;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 16px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .download-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-    background: linear-gradient(45deg, #20c997, #17a2b8);
+    background: linear-gradient(45deg, #45a049, #4CAF50);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .stats-section { 

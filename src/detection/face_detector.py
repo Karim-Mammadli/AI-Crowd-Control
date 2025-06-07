@@ -25,18 +25,6 @@ class FaceDetector:
             
             print(f"✅ MediaPipe Face Detection initialized successfully")
             
-            # # Test with dummy image
-            # print("🧪 Testing MediaPipe with dummy image...")
-            # dummy_img = np.zeros((480, 640, 3), dtype=np.uint8)
-            # # Add a simple face-like pattern for testing
-            # cv2.circle(dummy_img, (320, 240), 50, (255, 255, 255), -1)  # Face
-            # cv2.circle(dummy_img, (300, 220), 10, (0, 0, 0), -1)        # Left eye
-            # cv2.circle(dummy_img, (340, 220), 10, (0, 0, 0), -1)        # Right eye
-            
-            # rgb_dummy = cv2.cvtColor(dummy_img, cv2.COLOR_BGR2RGB)
-            # test_results = self.face_detection.process(rgb_dummy)
-            # print(f"✅ MediaPipe test completed")
-            
         except Exception as e:
             print(f"❌ MediaPipe initialization error: {e}")
             raise e

@@ -22,13 +22,13 @@ import signal
 # Import detection modules
 def load_detection_modules():
     try:
-        from src.detection.yolo_detector import YOLODetector, YOLOFaceDetector
+        from src.detection.yolo_detector import YOLODetector
         from src.detection.face_detector import FaceDetector
         from src.utils.video_processor import VideoProcessor
-        return YOLODetector, FaceDetector, VideoProcessor, YOLOFaceDetector
-    except ImportError as e:
-        print(f"Warning: Could not import detection modules: {e}")
-        return None, None, None, None
+        return YOLODetector, FaceDetector, VideoProcessor
+    except Exception as e:
+        print(f"Error loading detection modules: {e}")
+        return None, None, None
 
 app = Flask(__name__, static_folder='static')
 # app.config['SECRET_KEY'] = 'your-secret-key-change-this'
@@ -113,9 +113,10 @@ class CrowdMonitoringSystem:
                 
                 # Step 1: Import modules
                 self.update_progress(1, total_steps, "Importing detection modules...")
-                YOLODetector, FaceDetector, VideoProcessor, YOLOFaceDetector = load_detection_modules()
-                if None in [YOLODetector, FaceDetector, VideoProcessor, YOLOFaceDetector]:
-                    raise ImportError("Detection modules not available")
+                YOLODetector, FaceDetector, VideoProcessor = load_detection_modules()
+                if None in [YOLODetector, FaceDetector, VideoProcessor]:
+                    print("Failed to load one or more detection modules")
+                    return False
                 
                 # Step 2: Initialize video processor (for camera if needed)
                 self.update_progress(2, total_steps, "Initializing video processor...")
@@ -135,10 +136,10 @@ class CrowdMonitoringSystem:
                 # raising it (e.g., 0.7) might reduce false positives but miss some faces
 
                 # DEFAULT Face Detector WITH MEDIAPIPE
-                # self.face_detector = FaceDetector(confidence_threshold=0.5)
+                self.face_detector = FaceDetector(confidence_threshold=0.3)
 
                 # ALTERNATIVE Face Detector WITH YOLO
-                self.face_detector = YOLOFaceDetector('yolov8n.pt')
+                # self.face_detector = YOLOFaceDetector('yolov8n.pt')
                 
                 # Step 5: Complete
                 self.update_progress(5, total_steps, "All AI models loaded - ready for processing!")
@@ -206,10 +207,25 @@ class CrowdMonitoringSystem:
                 cv2.putText(result_frame, label, (bbox[0], bbox[1] - 10), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
             
-            # Save processed image
-            filename = os.path.basename(image_path)
-            processed_path = os.path.join(PROCESSED_FOLDER, f"processed_{filename}")
-            cv2.imwrite(processed_path, result_frame)
+            # Save processed image in the same format as the original upload
+            base_filename = os.path.basename(image_path)
+            if base_filename.startswith('processed_'):
+                base_filename = base_filename[len('processed_'):]
+            name, ext = os.path.splitext(base_filename)
+            ext = ext.lower() if ext.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.webp'] else '.jpg'
+            processed_filename = f"processed_{name}{ext}"
+            processed_path = os.path.join(PROCESSED_FOLDER, processed_filename)
+            # Choose correct encoding for OpenCV
+            if ext in ['.jpg', '.jpeg']:
+                cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+            elif ext == '.png':
+                cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_PNG_COMPRESSION), 3])
+            elif ext == '.bmp':
+                cv2.imwrite(processed_path, result_frame)
+            elif ext == '.webp':
+                cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_WEBP_QUALITY), 90])
+            else:
+                cv2.imwrite(processed_path, result_frame)
             
             # Convert to base64 for frontend display
             _, buffer = cv2.imencode('.jpg', result_frame)
@@ -232,6 +248,7 @@ class CrowdMonitoringSystem:
                 'success': True,
                 'processed_image': img_base64,
                 'processed_path': processed_path,
+                'processed_filename': processed_filename,
                 'stats': self.stats
             }
             
@@ -439,7 +456,9 @@ def upload_image():
                 'success': True,
                 'message': 'Image processed successfully',
                 'processed_image': result['processed_image'],
-                'stats': result['stats']
+                'stats': result['stats'],
+                'processed_path': result['processed_path'],
+                'processed_filename': result['processed_filename']
             })
         else:
             return jsonify(result)
@@ -487,7 +506,16 @@ def upload_video():
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    return send_from_directory(PROCESSED_FOLDER, filename, as_attachment=True)
+    """Download a processed file."""
+    try:
+        # Ensure the filename is secure and exists in the processed folder
+        if not os.path.exists(os.path.join(PROCESSED_FOLDER, filename)):
+            return jsonify({'success': False, 'message': 'File not found'}), 404
+        
+        return send_from_directory(PROCESSED_FOLDER, filename, as_attachment=True)
+    except Exception as e:
+        print(f"❌ Download error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # WebSocket handlers
 @socketio.on('start_video_processing')
