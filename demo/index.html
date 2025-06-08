@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Crowd Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 AI Crowd Monitoring System</h1>
+            <p>Real-time person & face detection powered by YOLOv8 + MediaPipe</p>
+            <div class="model-status" id="modelStatus">
+                🤖 Models: Ready to load | 👥 Person Detection + 👤 Face Detection
+            </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="progress-container" id="progressContainer">
+            <h3>🔄 Loading AI Models</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+            <div class="progress-step" id="progressStep">Initializing...</div>
+        </div>
+        
+        <!-- Video Processing Progress -->
+        <div class="progress-container" id="videoProgressContainer">
+            <h3>🎬 Processing Video</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="videoProgressFill"></div>
+            </div>
+            <div class="progress-text" id="videoProgressText">0%</div>
+            <div class="progress-step" id="videoProgressStep">Processing frames...</div>
+        </div>
+        
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h3>📁 Upload Files for Analysis</h3>
+            
+            <div class="upload-buttons">
+                <button class="upload-btn image-upload-btn" id="imageUploadBtn" onclick="document.getElementById('imageUpload').click()">
+                    📷 Upload Image
+                </button>
+                <input type="file" id="imageUpload" accept=".jpg,.jpeg,.png,.bmp,.webp" style="display: none;">
+                
+                <button class="upload-btn video-upload-btn" id="videoUploadBtn" onclick="document.getElementById('videoUpload').click()">
+                    🎬 Upload Video
+                </button>
+                <input type="file" id="videoUpload" accept=".mp4,.avi,.mov,.mkv,.webm" style="display: none;">
+                
+                <button id="stopProcessingBtn" class="upload-btn stop-btn" onclick="stopProcessing()" disabled>
+                    ⏹️ Stop Processing
+                </button>
+            </div>
+            
+            <!-- Drag & Drop Zone -->
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-content">
+                    <div class="drop-icon">📁</div>
+                    <p><strong>Drag & drop files here</strong></p>
+                    <p>or click the buttons above</p>
+                    <div class="supported-formats">
+                        <small>
+                            <strong>Images:</strong> JPG, PNG, BMP, WEBP (max 10MB)<br>
+                            <strong>Videos:</strong> MP4, AVI, MOV, MKV, WEBM (max 100MB)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Camera Section (Disabled) -->
+        <div class="camera-section disabled-section">
+            <h3>📹 Camera (Currently Disabled)</h3>
+            <p><small>Camera functionality temporarily disabled. Use file upload instead.</small></p>
+            <div class="controls">
+                <button id="startBtn" class="start-btn" disabled>
+                    📹 Camera Mode (Disabled)
+                </button>
+            </div>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div class="main-content">
+            <div class="video-section">
+                <h3 id="mediaTitle">📹 Analysis Results</h3>
+                <div class="media-container">
+                    <!-- Image Display -->
+                    <div id="imageContainer" class="media-display" style="display: none; flex-direction: column; align-items: center;">
+                        <div class="media-box">
+                            <img id="originalImage" src="" alt="Original Image" class="media-item">
+                        </div>
+                        <div class="media-box">
+                            <img id="processedImage" src="" alt="Processed Image" class="media-item">
+                        </div>
+                    </div>
+                    
+                    <!-- Video Display -->
+                    <div id="videoContainer" class="media-display" style="display: none; flex-direction: column; align-items: center;">
+                        <div class="media-box">
+                            <video id="uploadedVideo" controls class="media-item">
+                                Your browser does not support the video tag.
+                            </video>
+                            <canvas id="overlay"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Camera (when enabled) -->
+                    <div id="cameraContainer" class="media-display" style="display: none;">
+                        <video id="video" autoplay playsinline muted class="media-item"></video>
+                        <canvas id="cameraOverlay"></canvas>
+                    </div>
+                    
+                    <!-- Placeholder -->
+                    <div id="placeholderContainer" class="media-display">
+                        <div class="placeholder-content">
+                            <div class="placeholder-icon">🎯</div>
+                            <h4>Ready for Analysis</h4>
+                            <p>Upload an image or video to start AI detection</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="media-info">
+                    <span class="detection-legend">
+                        🟢 People Detection | 🔵 Face Detection
+                    </span>
+                </div>
+                
+                <!-- Download Section -->
+                <div id="downloadSection" class="download-section" style="display: none;">
+                    <h4>📥 Download Results</h4>
+                    <button id="downloadBtn" class="download-btn" onclick="downloadResults()">
+                        💾 Download Processed File
+                    </button>
+                </div>
+            </div>
+            
+            <div class="stats-section">
+                <h3>📊 Live Detection Statistics</h3>
+                
+                <div class="stat-item">
+                    <div class="stat-label">👥 People Count</div>
+                    <div class="stat-value" id="peopleCount">0</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-label">👤 Face Count</div>
+                    <div class="stat-value" id="faceCount">0</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-label">🏢 Crowd Density</div>
+                    <div class="stat-value" id="crowdDensity">EMPTY</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-label">🚨 Alert Level</div>
+                    <div class="stat-value alert-normal" id="alertLevel">NORMAL</div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-label">⚙️ System Status</div>
+                    <div class="stat-value" id="systemStatus">Ready</div>
+                </div>
+                
+                <div class="activity-log">
+                    <h4>📝 Activity Log</h4>
+                    <div id="activityLog">
+                        <div class="activity-item">System initialized - ready for file upload</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/app.js"></script>
+</body>
+</html>
