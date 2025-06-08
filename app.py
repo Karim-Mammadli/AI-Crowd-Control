@@ -7,11 +7,14 @@ from werkzeug.utils import secure_filename
 import base64
 import tempfile
 
+
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore', category=UserWarning, module='mediapipe')
 
 from flask import Flask, send_from_directory, request, jsonify
+from src.models.model_registry import CrowdMonitoringModelRegistry
+import atexit
 from flask_socketio import SocketIO, emit
 import threading
 import time
@@ -71,6 +74,9 @@ class CrowdMonitoringSystem:
         # File processing
         self.current_video_path = None
         self.current_image_path = None
+
+        self.model_registry = CrowdMonitoringModelRegistry("ai-crowd-monitoring-hackathon")
+        self.models_registered = False
         
         # Statistics
         self.stats = {
@@ -152,6 +158,11 @@ class CrowdMonitoringSystem:
                 
                 self.models_loaded = True
                 self.is_initializing = False
+
+                if self.models_loaded:
+                    # Register models with MLflow for HP AI Studio deployment
+                    threading.Thread(target=self.register_models_with_mlflow, daemon=True).start()
+
                 return True
                 
             except Exception as e:
@@ -164,6 +175,73 @@ class CrowdMonitoringSystem:
                 self.models_loaded = False
                 return False
     
+    def register_models_with_mlflow(self):
+        """Register models with MLflow for HP AI Studio competition."""
+        if not self.models_loaded or self.models_registered:
+            return
+        
+        try:
+            print("🏆 Registering for HP AI Studio Competition...")
+            
+            # Use the competition registration function
+            run_id, model = self.model_registry.register_complete_system(
+                self.yolo_detector,
+                self.face_detector
+            )
+            
+            if model:
+                self.models_registered = True
+                print("🎯 Competition models registered successfully!")
+                print(f"   Model: {model.name} v{model.version}")
+                print(f"   Demo folder created for HP AI Studio deployment")
+                return True
+            
+        except Exception as e:
+            print(f"❌ Competition registration error: {e}")
+            return False
+    
+    # def register_models_with_mlflow(self):
+    #     """Register models with MLflow after they're loaded."""
+    #     if not self.models_loaded or self.models_registered:
+    #         return
+        
+    #     try:
+    #         print("📝 Registering models with MLflow...")
+            
+    #         # Register individual models
+    #         yolo_run_id = self.model_registry.register_yolo_model(
+    #             self.yolo_detector, 
+    #             "crowd-yolo-detector-v1"
+    #         )
+            
+    #         face_run_id = self.model_registry.register_face_model(
+    #             self.face_detector,
+    #             "crowd-face-detector-v1" 
+    #         )
+            
+    #         # Register complete system
+    #         system_run_id = self.model_registry.register_complete_system(
+    #             self.yolo_detector,
+    #             self.face_detector,
+    #             "ai-crowd-monitoring-system-v1"
+    #         )
+            
+    #         # Create demo artifacts for deployment
+    #         demo_dir = self.model_registry.create_demo_artifacts("demo")
+            
+    #         if all([yolo_run_id, face_run_id, system_run_id, demo_dir]):
+    #             self.models_registered = True
+    #             print("✅ All models registered with MLflow successfully!")
+                
+    #             # List registered models
+    #             self.model_registry.list_models()
+                
+    #         return True
+        
+        except Exception as e:
+            print(f"❌ MLflow registration error: {e}")
+            return False
+
     def process_image(self, image_path):
         """Process a single image and return results."""
         if not self.models_loaded:
