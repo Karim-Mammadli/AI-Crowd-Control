@@ -1,0 +1,104 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+.venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Generated directories
+processed/
+uploads/
+.cursor/
+mlruns/
+wandb/
+notebooks/
+
+# Logs
+*.log
+logs/
+mlflow.log
+
+# Model files (except the one we want to track)
+*.pt
+!yolov8n.pt
+
+# Temporary files
+*.tmp
+*.temp
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+.coverage.*
+coverage.xml
+*.cover
+
+# Allow specific files and directories
+!app.py
+!requirements.txt
+!static/
+!src/
+!demo/
+!demo/*
+!demo/**/*
+!models/
+!models/*
+!models/**/*
+!yolov8n.pt
+
+# Allow specific files in demo
+!demo/index.html
+!demo/css/
+!demo/js/
+!demo/api.html
+
+# Allow specific files in static
+!static/index.html
+!static/css/
+!static/js/
+!static/css/styles.css
+!static/js/app.js
+
+# Allow specific files in src
+!src/__init__.py
+!src/detection/
+!src/analysis/
+!src/utils/
+!src/detection/__init__.py
+!src/detection/yolo_detector.py
+!src/detection/face_detector.py
+!src/analysis/__init__.py
+!src/utils/__init__.py
+!src/utils/video_processor.py
+
+# MLflow artifacts
+crowd_monitoring_info.json

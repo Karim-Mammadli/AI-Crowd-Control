@@ -6,7 +6,12 @@ import numpy as np
 from werkzeug.utils import secure_filename
 import base64
 import tempfile
+import mlflow
+import mlflow.pytorch
+import mlflow.sklearn
 
+# Set up MLflow (AI Studio handles the tracking URI automatically)
+mlflow.set_experiment("hp-ai-studio-competition")
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
