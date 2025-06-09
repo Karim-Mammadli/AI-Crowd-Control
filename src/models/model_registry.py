@@ -175,7 +175,7 @@ class CrowdMonitoringWrapper(mlflow.pyfunc.PythonModel):
             congestion_score = 1.0
             behavior_flags.append("overcrowded")
         
-        # 2. Proximity Analysis (your excellent logic!)
+        # 2. Proximity Analysis
         close_interactions = 0
         if total_people >= 2:
             for i, person1 in enumerate(person_detections):
@@ -229,7 +229,7 @@ class CrowdMonitoringWrapper(mlflow.pyfunc.PythonModel):
             flow_pattern = "STATIONARY"    # People lingering/shopping
             behavior_flags.append("customer_browsing")
         
-        # 5. Occupancy Rate (your area analysis adapted)
+        # 5. Occupancy Rate
         if person_detections:
             total_person_area = sum([
                 (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) 
@@ -255,7 +255,7 @@ class CrowdMonitoringWrapper(mlflow.pyfunc.PythonModel):
         elif risk_score > 0.3:
             risk_level = "MEDIUM"
         
-        # 7. Alert Level (your threat level logic adapted)
+        # 7. Alert Level
         total_detection_weight = total_people + (len(face_detections) * 0.3)
         if total_detection_weight == 0:
             alert_level = "NORMAL"
