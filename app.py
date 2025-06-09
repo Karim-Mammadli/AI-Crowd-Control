@@ -14,6 +14,8 @@ warnings.filterwarnings('ignore', category=UserWarning, module='mediapipe')
 
 from flask import Flask, send_from_directory, request, jsonify
 from src.models.model_registry import CrowdMonitoringModelRegistry
+from src.utils.config import MODEL_CONFIG, PATHS, ALLOWED_EXTENSIONS, MLFLOW_CONFIG
+from src.utils.image_enhancer import QuickImageEnhancer
 import atexit
 from flask_socketio import SocketIO, emit
 import threading
@@ -39,20 +41,11 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False, max_http_buffer_size=100*1024*1024)
 
 # Create upload directories
-UPLOAD_FOLDER = 'uploads'
-PROCESSED_FOLDER = 'processed'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
-
-ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webm'}
-ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'bmp', 'webp'}
+os.makedirs(PATHS['uploads'], exist_ok=True)
+os.makedirs(PATHS['processed'], exist_ok=True)
 
 def allowed_file(filename, file_type):
-    if file_type == 'video':
-        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
-    elif file_type == 'image':
-        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
-    return False
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS[file_type]
 
 class CrowdMonitoringSystem:
     def __init__(self):
@@ -70,12 +63,16 @@ class CrowdMonitoringSystem:
         self.processing_thread = None
         self._stop_event = threading.Event()
         self._initialization_lock = threading.Lock()
+
+        
+        self.image_enhancer = QuickImageEnhancer()
+
         
         # File processing
         self.current_video_path = None
         self.current_image_path = None
 
-        self.model_registry = CrowdMonitoringModelRegistry("ai-crowd-monitoring-hackathon")
+        self.model_registry = CrowdMonitoringModelRegistry(MLFLOW_CONFIG['experiment_name'])
         self.models_registered = False
         
         # Statistics
@@ -132,20 +129,12 @@ class CrowdMonitoringSystem:
                 # Step 3: Load YOLO model
                 self.update_progress(3, total_steps, "Loading YOLOv8 person detection model...")
                 print("🔄 Loading YOLOv8 model...")
-                self.yolo_detector = YOLODetector('yolov8n.pt')
+                self.yolo_detector = YOLODetector(MODEL_CONFIG['yolo']['model_path'])
                 
                 # Step 4: Load MediaPipe model
-                self.update_progress(4, total_steps, "Loading face detection model... (line 140 for which one")
-                print("👤 Loading face detection... (line 140 for which one)")
-                
-                # Lowering it (e.g., 0.3) might detect more faces but increase false positives
-                # raising it (e.g., 0.7) might reduce false positives but miss some faces
-
-                # DEFAULT Face Detector WITH MEDIAPIPE
-                self.face_detector = FaceDetector(confidence_threshold=0.3)
-
-                # ALTERNATIVE Face Detector WITH YOLO
-                # self.face_detector = YOLOFaceDetector('yolov8n.pt')
+                self.update_progress(4, total_steps, "Loading face detection model...")
+                print("👤 Loading face detection...")
+                self.face_detector = FaceDetector()
                 
                 # Step 5: Complete
                 self.update_progress(5, total_steps, "All AI models loaded - ready for processing!")
@@ -257,9 +246,12 @@ class CrowdMonitoringSystem:
             
             print(f"📷 Image shape: {frame.shape}")
             
+            # Enhance image for better detection
+            enhanced_frame = self.image_enhancer.enhance_for_detection(frame)
+            
             # Run detections
-            person_detections = self.yolo_detector.detect_persons(frame)
-            face_detections = self.face_detector.detect_faces(frame)
+            person_detections = self.yolo_detector.detect_persons(enhanced_frame)
+            face_detections = self.face_detector.detect_faces(enhanced_frame)
             
             print(f"👥 Found {len(person_detections)} people")
             print(f"👤 Found {len(face_detections)} faces")
@@ -292,7 +284,7 @@ class CrowdMonitoringSystem:
             name, ext = os.path.splitext(base_filename)
             ext = ext.lower() if ext.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.webp'] else '.jpg'
             processed_filename = f"processed_{name}{ext}"
-            processed_path = os.path.join(PROCESSED_FOLDER, processed_filename)
+            processed_path = os.path.join(PATHS['processed'], processed_filename)
             # Choose correct encoding for OpenCV
             if ext in ['.jpg', '.jpeg']:
                 cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
@@ -356,7 +348,7 @@ class CrowdMonitoringSystem:
             
             # Prepare output video
             filename = os.path.basename(video_path)
-            processed_path = os.path.join(PROCESSED_FOLDER, f"processed_{filename}")
+            processed_path = os.path.join(PATHS['processed'], f"processed_{filename}")
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             out = cv2.VideoWriter(processed_path, fourcc, fps, (width, height))
             
@@ -516,7 +508,7 @@ def upload_image():
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{timestamp}_{filename}"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file_path = os.path.join(PATHS['uploads'], filename)
         file.save(file_path)
         
         print(f"📁 Image uploaded: {file_path}")
@@ -562,7 +554,7 @@ def upload_video():
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{timestamp}_{filename}"
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file_path = os.path.join(PATHS['uploads'], filename)
         file.save(file_path)
         
         print(f"📁 Video uploaded: {file_path}")
@@ -587,10 +579,10 @@ def download_file(filename):
     """Download a processed file."""
     try:
         # Ensure the filename is secure and exists in the processed folder
-        if not os.path.exists(os.path.join(PROCESSED_FOLDER, filename)):
+        if not os.path.exists(os.path.join(PATHS['processed'], filename)):
             return jsonify({'success': False, 'message': 'File not found'}), 404
         
-        return send_from_directory(PROCESSED_FOLDER, filename, as_attachment=True)
+        return send_from_directory(PATHS['processed'], filename, as_attachment=True)
     except Exception as e:
         print(f"❌ Download error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
