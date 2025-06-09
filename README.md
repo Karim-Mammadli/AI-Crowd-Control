@@ -189,8 +189,3 @@
 - **End-to-End Pipeline:** Seamless data flow from video to alerts
 - **Scalable Architecture:** Easy to add more models or features
 
-### **Success Factors:**
-- **Real-time Demo:** Impressive live detection and alerts
-- **Multiple AI Modalities:** Computer vision + NLP + behavior analysis
-- **Practical Application:** Clear public safety use case
-- **Technical Innovation:** State-of-the-art models with optimal architecture
