@@ -1,5 +1,4 @@
-# 🏆 HP AI Studio & NVIDIA Developer Challenge
-## AI Crowd Monitoring System - Complete Setup Guide
+## AI Violence Detection System 
 
 This project creates an AI-powered crowd monitoring system that automatically deploys to HP AI Studio with a web interface and REST API.
 
