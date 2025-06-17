@@ -5,7 +5,6 @@
 - **Person Detection**: YOLOv8-powered people counting
 - **Face Recognition**: MediaPipe engagement analysis
 - **Crowd Analytics**: Density assessment, risk evaluation, flow patterns
-- **Industry Ready**: Retail, security, healthcare, event management
 
 ## Industry Use Cases
 
