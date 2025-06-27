@@ -55,7 +55,7 @@ pip install -r requirements.txt
 
 ### Step 2: run
 ```bash
-# Clone or navigate to your project
+#be sure to be in venv
 python app.py
 ```
 
