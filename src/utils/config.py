@@ -47,11 +47,4 @@ PATHS = {
 ALLOWED_EXTENSIONS = {
     'video': {'mp4', 'avi', 'mov', 'mkv', 'webm'},
     'image': {'jpg', 'jpeg', 'png', 'bmp', 'webp'},
-}
-
-# MLflow Settings
-MLFLOW_CONFIG = {
-    'experiment_name': 'ai-crowd-monitoring-hackathon',
-    'model_name': 'ai-crowd-monitoring-system',
-    'version': '1.0.0',
 } 

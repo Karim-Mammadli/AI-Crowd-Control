@@ -6,21 +6,13 @@ import numpy as np
 from werkzeug.utils import secure_filename
 import base64
 import tempfile
-import mlflow
-import mlflow.pytorch
-import mlflow.sklearn
-
-# Set up MLflow (AI Studio handles the tracking URI automatically)
-mlflow.set_experiment("hp-ai-studio-competition")
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore', category=UserWarning, module='mediapipe')
 
 from flask import Flask, send_from_directory, request, jsonify
-from src.models.model_registry import CrowdMonitoringModelRegistry
-from src.utils.config import MODEL_CONFIG, PATHS, ALLOWED_EXTENSIONS, MLFLOW_CONFIG
-from src.utils.image_enhancer import QuickImageEnhancer
+from src.utils.config import MODEL_CONFIG, PATHS, ALLOWED_EXTENSIONS
 import atexit
 from flask_socketio import SocketIO, emit
 import threading
@@ -41,8 +33,9 @@ def load_detection_modules():
         return None, None, None
 
 app = Flask(__name__, static_folder='static')
-# app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
+
+#what is this?
 socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False, max_http_buffer_size=100*1024*1024)
 
 # Create upload directories
@@ -57,6 +50,8 @@ class CrowdMonitoringSystem:
         self.is_monitoring = False
         self.is_initializing = False
         self.models_loaded = False
+
+        #what is this?
         self.processing_mode = 'camera'  # 'camera', 'video', 'image'
         
         # AI Models
@@ -64,22 +59,17 @@ class CrowdMonitoringSystem:
         self.yolo_detector = None
         self.face_detector = None
         
+        #what is this?
         # Threading
         self.processing_thread = None
         self._stop_event = threading.Event()
         self._initialization_lock = threading.Lock()
 
         
-        self.image_enhancer = QuickImageEnhancer()
-
-        
         # File processing
         self.current_video_path = None
         self.current_image_path = None
 
-        self.model_registry = CrowdMonitoringModelRegistry(MLFLOW_CONFIG['experiment_name'])
-        self.models_registered = False
-        
         # Statistics
         self.stats = {
             'person_count': 0,
@@ -90,7 +80,6 @@ class CrowdMonitoringSystem:
             'system_status': 'Ready'
         }
         
-        print("🚀 AI Crowd Monitoring System initialized with file upload support")
     
     def update_progress(self, step, total, message):
         """Update loading progress bar."""
@@ -117,7 +106,7 @@ class CrowdMonitoringSystem:
             
             try:
                 print("📥 Starting AI model initialization...")
-                total_steps = 5
+                total_steps = 4
                 
                 # Step 1: Import modules
                 self.update_progress(1, total_steps, "Importing detection modules...")
@@ -141,8 +130,8 @@ class CrowdMonitoringSystem:
                 print("👤 Loading face detection...")
                 self.face_detector = FaceDetector()
                 
-                # Step 5: Complete
-                self.update_progress(5, total_steps, "All AI models loaded - ready for processing!")
+                # Complete
+                self.update_progress(4, total_steps, "All AI models loaded - ready for processing!")
                 print("✅ All models loaded successfully!")
                 
                 socketio.emit('system_status', {
@@ -152,11 +141,6 @@ class CrowdMonitoringSystem:
                 
                 self.models_loaded = True
                 self.is_initializing = False
-
-                if self.models_loaded:
-                    # Register models with MLflow for HP AI Studio deployment
-                    threading.Thread(target=self.register_models_with_mlflow, daemon=True).start()
-
                 return True
                 
             except Exception as e:
@@ -169,73 +153,8 @@ class CrowdMonitoringSystem:
                 self.models_loaded = False
                 return False
     
-    def register_models_with_mlflow(self):
-        """Register models with MLflow for HP AI Studio competition."""
-        if not self.models_loaded or self.models_registered:
-            return
-        
-        try:
-            print("🏆 Registering for HP AI Studio Competition...")
-            
-            # Use the competition registration function
-            run_id, model = self.model_registry.register_complete_system(
-                self.yolo_detector,
-                self.face_detector
-            )
-            
-            if model:
-                self.models_registered = True
-                print("🎯 Competition models registered successfully!")
-                print(f"   Model: {model.name} v{model.version}")
-                print(f"   Demo folder created for HP AI Studio deployment")
-                return True
-            
-        except Exception as e:
-            print(f"❌ Competition registration error: {e}")
-            return False
-    
-    # def register_models_with_mlflow(self):
-    #     """Register models with MLflow after they're loaded."""
-    #     if not self.models_loaded or self.models_registered:
-    #         return
-        
-    #     try:
-    #         print("📝 Registering models with MLflow...")
-            
-    #         # Register individual models
-    #         yolo_run_id = self.model_registry.register_yolo_model(
-    #             self.yolo_detector, 
-    #             "crowd-yolo-detector-v1"
-    #         )
-            
-    #         face_run_id = self.model_registry.register_face_model(
-    #             self.face_detector,
-    #             "crowd-face-detector-v1" 
-    #         )
-            
-    #         # Register complete system
-    #         system_run_id = self.model_registry.register_complete_system(
-    #             self.yolo_detector,
-    #             self.face_detector,
-    #             "ai-crowd-monitoring-system-v1"
-    #         )
-            
-    #         # Create demo artifacts for deployment
-    #         demo_dir = self.model_registry.create_demo_artifacts("demo")
-            
-    #         if all([yolo_run_id, face_run_id, system_run_id, demo_dir]):
-    #             self.models_registered = True
-    #             print("✅ All models registered with MLflow successfully!")
-                
-    #             # List registered models
-    #             self.model_registry.list_models()
-                
-    #         return True
-        
-        except Exception as e:
-            print(f"❌ MLflow registration error: {e}")
-            return False
-
+   
+ 
     def process_image(self, image_path):
         """Process a single image and return results."""
         if not self.models_loaded:
@@ -244,6 +163,7 @@ class CrowdMonitoringSystem:
         try:
             print(f"🖼️ Processing image: {image_path}")
             
+            #what is this?
             # Load image
             frame = cv2.imread(image_path)
             if frame is None:
@@ -251,12 +171,9 @@ class CrowdMonitoringSystem:
             
             print(f"📷 Image shape: {frame.shape}")
             
-            # Enhance image for better detection
-            enhanced_frame = self.image_enhancer.enhance_for_detection(frame)
-            
             # Run detections
-            person_detections = self.yolo_detector.detect_persons(enhanced_frame)
-            face_detections = self.face_detector.detect_faces(enhanced_frame)
+            person_detections = self.yolo_detector.detect_persons(frame)
+            face_detections = self.face_detector.detect_faces(frame)
             
             print(f"👥 Found {len(person_detections)} people")
             print(f"👤 Found {len(face_detections)} faces")
@@ -290,6 +207,8 @@ class CrowdMonitoringSystem:
             ext = ext.lower() if ext.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.webp'] else '.jpg'
             processed_filename = f"processed_{name}{ext}"
             processed_path = os.path.join(PATHS['processed'], processed_filename)
+
+            #what is this?
             # Choose correct encoding for OpenCV
             if ext in ['.jpg', '.jpeg']:
                 cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
@@ -478,6 +397,8 @@ class CrowdMonitoringSystem:
         """Stop any ongoing processing."""
         self.is_monitoring = False
         print("🛑 Processing stopped")
+
+
 
 # Global system
 monitor_system = CrowdMonitoringSystem()
