@@ -53,6 +53,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### Step 2: run
+```bash
+# Clone or navigate to your project
+python app.py
+```
+
 
 #### 1. **PRIMARY OBJECT DETECTION: YOLOv11 (Latest)**
 - **Performance:** 54.4 mAP on COCO, fastest inference speed
