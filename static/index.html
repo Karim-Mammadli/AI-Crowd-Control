@@ -42,6 +42,26 @@
         <div class="upload-section">
             <h3>📁 Upload Files for Analysis</h3>
             
+            <!-- Model Selection -->
+            <div class="model-selection">
+                <h4>🤖 Select Detection Models</h4>
+                <div class="model-options">
+                    <div class="model-option">
+                        <label for="personModel">👥 Person Detection:</label>
+                        <select id="personModel" class="model-select">
+                            <option value="yolov8">YOLOv8 (Recommended)</option>
+                        </select>
+                    </div>
+                    <div class="model-option">
+                        <label for="faceModel">👤 Face Detection:</label>
+                        <select id="faceModel" class="model-select">
+                            <option value="mediapipe">MediaPipe (Fast & Accurate)</option>
+                         <!--   <option value="retinaface">RetinaFace (High Precision)</option> -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
             <div class="upload-buttons">
                 <button class="upload-btn image-upload-btn" id="imageUploadBtn" onclick="document.getElementById('imageUpload').click()">
                     📷 Upload Image

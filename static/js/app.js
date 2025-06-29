@@ -28,6 +28,21 @@ function setupUI() {
     // Update initial status
     showStatus('🎯 Ready to analyze! Upload an image or video to start AI detection.', 'info');
     
+    // Add event listeners for model selection
+    const personModelSelect = document.getElementById('personModel');
+    const faceModelSelect = document.getElementById('faceModel');
+    
+    if (personModelSelect) {
+        personModelSelect.addEventListener('change', updateModelStatus);
+    }
+    
+    if (faceModelSelect) {
+        faceModelSelect.addEventListener('change', updateModelStatus);
+    }
+    
+    // Update model status initially
+    updateModelStatus();
+    
     console.log('✅ UI setup complete');
 }
 
@@ -199,6 +214,9 @@ function handleFileSelection(file) {
 function handleImageUpload(file) {
     console.log('📷 Starting image upload and analysis:', file.name);
     
+    // Get selected models
+    const selectedModels = getSelectedModels();
+    
     // Update UI immediately
     showStatus('📤 Uploading and analyzing image...', 'loading');
     setProcessingState(true);
@@ -210,6 +228,8 @@ function handleImageUpload(file) {
     // Create form data and upload
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('person_model', selectedModels.person_model);
+    formData.append('face_model', selectedModels.face_model);
     
     fetch('/upload_image', {
         method: 'POST',
@@ -241,6 +261,9 @@ function handleImageUpload(file) {
 function handleVideoUpload(file) {
     console.log('🎬 Starting video upload and analysis:', file.name);
     
+    // Get selected models
+    const selectedModels = getSelectedModels();
+    
     // Update UI immediately
     showStatus('📤 Uploading video for analysis...', 'loading');
     setProcessingState(true);
@@ -252,6 +275,8 @@ function handleVideoUpload(file) {
     // Create form data and upload
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('person_model', selectedModels.person_model);
+    formData.append('face_model', selectedModels.face_model);
     
     fetch('/upload_video', {
         method: 'POST',
@@ -271,8 +296,12 @@ function handleVideoUpload(file) {
             showStatus('🎬 Video uploaded! Starting AI analysis...', 'success');
             document.getElementById('mediaTitle').textContent = '🎬 Analyzing Video...';
             
-            // Trigger server-side processing
-            socket.emit('start_video_processing', { file_path: data.file_path });
+            // Trigger server-side processing with model selection
+            socket.emit('start_video_processing', { 
+                file_path: data.file_path,
+                person_model: selectedModels.person_model,
+                face_model: selectedModels.face_model
+            });
             
         } else {
             showStatus('❌ Video upload failed: ' + data.message, 'error');
@@ -762,3 +791,25 @@ window.downloadResults = downloadResults;
 
 // Initialize when DOM is ready
 console.log('📋 Enhanced upload system ready!');
+
+// Model selection functions
+function getSelectedModels() {
+    const personModel = document.getElementById('personModel').value;
+    const faceModel = document.getElementById('faceModel').value;
+    
+    console.log(`🤖 Selected models - Person: ${personModel}, Face: ${faceModel}`);
+    
+    return {
+        person_model: personModel,
+        face_model: faceModel
+    };
+}
+
+function updateModelStatus() {
+    const models = getSelectedModels();
+    const statusElement = document.getElementById('modelStatus');
+    
+    if (statusElement) {
+        statusElement.innerHTML = `🤖 Models: Ready to load | 👥 ${models.person_model.toUpperCase()} + 👤 ${models.face_model.toUpperCase()}`;
+    }
+}

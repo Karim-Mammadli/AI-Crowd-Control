@@ -1,4 +1,4 @@
-# src/detection/face_detector.py - Debug Version
+# src/detection/face_detector.py - MediaPipe Implementation
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -15,9 +15,10 @@ class FaceDetector:
         """Initialize the face detector with settings from config."""
         self.mp_face_detection = mp.solutions.face_detection
         self.face_detection = self.mp_face_detection.FaceDetection(
-            model_selection=1,  # 0 for short-range, 1 for full-range
-            min_detection_confidence=MODEL_CONFIG['face']['confidence_threshold']
+            model_selection=MODEL_CONFIG['face']['mediapipe']['model_selection'],
+            min_detection_confidence=MODEL_CONFIG['face']['mediapipe']['confidence_threshold']
         )
+        print("✅ MediaPipe face detector initialized")
     
     def detect_faces(self, image):
         """
@@ -76,7 +77,7 @@ class FaceDetector:
 
     def draw_detections(self, frame, detections):
         """Draw face bounding boxes with debugging."""
-        print(f"🎨 Drawing {len(detections)} face detections")
+        print(f"🎨 Drawing {len(detections)} MediaPipe face detections")
         
         for i, det in enumerate(detections):
             bbox = det['bbox']

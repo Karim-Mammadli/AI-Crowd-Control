@@ -14,8 +14,20 @@ MODEL_CONFIG = {
     
     # Face Detection Settings
     'face': {
-        'confidence_threshold': 0.1,  # Confidence threshold for face detection
-        # 'min_face_size': 20,         # Minimum face size to detect
+        # General face detection settings
+        'confidence_threshold': 0.1,  # Default confidence threshold
+        
+        # MediaPipe specific settings
+        'mediapipe': {
+            'confidence_threshold': 0.3,  # Lower confidence threshold for better face detection in crowds
+            'model_selection': 1,         # 0 for short-range, 1 for full-range
+        },
+        
+        # RetinaFace specific settings
+        'retinaface': {
+            'confidence_threshold': 0.5,  # Lower confidence threshold for RetinaFace
+            'quality': 'normal',          # 'normal', 'high', 'low'
+        },
     },
     
     # Video Processing Settings
@@ -25,12 +37,12 @@ MODEL_CONFIG = {
         'batch_size': 10,            # Number of frames to process in batch
     },
     
-    # Crowd Analysis Settings
+    # Crowd Analysis Settings - Updated for larger crowds
     'crowd': {
         'density_thresholds': {
-            'low': 2,                # Number of people for LOW density
-            'medium': 5,             # Number of people for MEDIUM density
-            'high': 10,              # Number of people for HIGH density
+            'low': 5,                 # Increased: Number of people for LOW density
+            'medium': 15,             # Increased: Number of people for MEDIUM density
+            'high': 30,               # Increased: Number of people for HIGH density
         },
         'proximity_threshold': 0.15,  # Normalized distance for close interactions
     }

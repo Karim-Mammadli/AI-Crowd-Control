@@ -133,12 +133,15 @@ class YOLODetector:
             
             print(f"🔍 YOLO processing frame: {frame.shape}")
             
+            # Get confidence threshold from config
+            conf_threshold = MODEL_CONFIG['yolo']['confidence_threshold']
+            
             # Run detection with specific parameters
             results = self.model(
                 frame, 
                 device=self.device, 
                 classes=[0],  # Only person class
-                conf=0.3,     # Lower confidence threshold
+                conf=conf_threshold,  # Use config threshold
                 verbose=False
             )
             
@@ -157,7 +160,7 @@ class YOLODetector:
                     for i, (box, score) in enumerate(zip(boxes, scores)):
                         print(f"   Detection {i}: confidence={score:.3f}, box={box}")
                         
-                        if score > 0.3:  # Lower threshold for debugging
+                        if score > conf_threshold:  # Use config threshold
                             detections.append({
                                 'bbox': [int(x) for x in box],
                                 'confidence': float(score),

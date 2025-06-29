@@ -54,6 +54,90 @@ body {
     font-size: 1.5em;
 }
 
+/* Model Selection Styles */
+.model-selection {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.model-selection h4 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 1.2em;
+    color: #FFD700;
+}
+
+.model-options {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+}
+
+.model-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 200px;
+}
+
+.model-option label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #E0E0E0;
+}
+
+.model-select {
+    padding: 10px 15px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    min-width: 200px;
+}
+
+.model-select:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.model-select:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+.model-select option {
+    background: #2a5298;
+    color: white;
+    padding: 8px;
+}
+
+/* Responsive adjustments for model selection */
+@media (max-width: 768px) {
+    .model-options {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .model-option {
+        min-width: auto;
+    }
+    
+    .model-select {
+        min-width: 100%;
+    }
+}
+
 .upload-buttons {
     display: flex;
     justify-content: center;

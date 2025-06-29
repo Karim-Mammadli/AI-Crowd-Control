@@ -25,9 +25,9 @@ import signal
 def load_detection_modules():
     try:
         from src.detection.yolo_detector import YOLODetector
-        from src.detection.face_detector import FaceDetector
+        from src.detection.face_detector_manager import FaceDetectorManager
         from src.utils.video_processor import VideoProcessor
-        return YOLODetector, FaceDetector, VideoProcessor
+        return YOLODetector, FaceDetectorManager, VideoProcessor
     except Exception as e:
         print(f"Error loading detection modules: {e}")
         return None, None, None
@@ -58,6 +58,7 @@ class CrowdMonitoringSystem:
         self.video_processor = None
         self.yolo_detector = None
         self.face_detector = None
+        self.face_detector_manager = None
         
         #what is this?
         # Threading
@@ -80,6 +81,9 @@ class CrowdMonitoringSystem:
             'system_status': 'Ready'
         }
         
+        # Current model selections
+        self.current_person_model = 'yolov8'
+        self.current_face_model = 'mediapipe'
     
     def update_progress(self, step, total, message):
         """Update loading progress bar."""
@@ -92,10 +96,10 @@ class CrowdMonitoringSystem:
         })
         print(f"📊 Progress: {progress}% - {message}")
     
-    def initialize_models(self):
+    def initialize_models(self, person_model='yolov8', face_model='mediapipe'):
         with self._initialization_lock:
-            if self.models_loaded:
-                print("✅ Models already loaded")
+            if self.models_loaded and self.current_person_model == person_model and self.current_face_model == face_model:
+                print("✅ Models already loaded with same configuration")
                 return True
                 
             if self.is_initializing:
@@ -105,13 +109,13 @@ class CrowdMonitoringSystem:
             self.is_initializing = True
             
             try:
-                print("📥 Starting AI model initialization...")
+                print(f"📥 Starting AI model initialization... Person: {person_model}, Face: {face_model}")
                 total_steps = 4
                 
                 # Step 1: Import modules
                 self.update_progress(1, total_steps, "Importing detection modules...")
-                YOLODetector, FaceDetector, VideoProcessor = load_detection_modules()
-                if None in [YOLODetector, FaceDetector, VideoProcessor]:
+                YOLODetector, FaceDetectorManager, VideoProcessor = load_detection_modules()
+                if None in [YOLODetector, FaceDetectorManager, VideoProcessor]:
                     print("Failed to load one or more detection modules")
                     return False
                 
@@ -121,25 +125,28 @@ class CrowdMonitoringSystem:
                 self.video_processor = VideoProcessor()
                 
                 # Step 3: Load YOLO model
-                self.update_progress(3, total_steps, "Loading YOLOv8 person detection model...")
-                print("🔄 Loading YOLOv8 model...")
+                self.update_progress(3, total_steps, f"Loading {person_model.upper()} person detection model...")
+                print(f"🔄 Loading {person_model.upper()} model...")
                 self.yolo_detector = YOLODetector(MODEL_CONFIG['yolo']['model_path'])
                 
-                # Step 4: Load MediaPipe model
-                self.update_progress(4, total_steps, "Loading face detection model...")
-                print("👤 Loading face detection...")
-                self.face_detector = FaceDetector()
+                # Step 4: Load face detection model
+                self.update_progress(4, total_steps, f"Loading {face_model.upper()} face detection model...")
+                print(f"👤 Loading {face_model.upper()} face detection...")
+                self.face_detector_manager = FaceDetectorManager()
+                self.face_detector = self.face_detector_manager.create_detector(face_model)
                 
                 # Complete
-                self.update_progress(4, total_steps, "All AI models loaded - ready for processing!")
+                self.update_progress(4, total_steps, f"All AI models loaded - {person_model.upper()} + {face_model.upper()} ready!")
                 print("✅ All models loaded successfully!")
                 
                 socketio.emit('system_status', {
                     'status': 'ready', 
-                    'message': 'All AI models loaded - ready to monitor!'
+                    'message': f'All AI models loaded - {person_model.upper()} + {face_model.upper()} ready to monitor!'
                 })
                 
                 self.models_loaded = True
+                self.current_person_model = person_model
+                self.current_face_model = face_model
                 self.is_initializing = False
                 return True
                 
@@ -155,13 +162,14 @@ class CrowdMonitoringSystem:
     
    
  
-    def process_image(self, image_path):
+    def process_image(self, image_path, person_model='yolov8', face_model='mediapipe'):
         """Process a single image and return results."""
-        if not self.models_loaded:
-            return {'success': False, 'message': 'Models not loaded'}
+        # Initialize models with selected types
+        if not self.initialize_models(person_model, face_model):
+            return {'success': False, 'message': 'Failed to initialize models'}
         
         try:
-            print(f"🖼️ Processing image: {image_path}")
+            print(f"🖼️ Processing image: {image_path} with {person_model.upper()} + {face_model.upper()}")
             
             #what is this?
             # Load image
@@ -250,13 +258,14 @@ class CrowdMonitoringSystem:
             print(f"❌ Image processing error: {e}")
             return {'success': False, 'message': str(e)}
     
-    def process_video(self, video_path):
+    def process_video(self, video_path, person_model='yolov8', face_model='mediapipe'):
         """Process video and emit real-time updates."""
-        if not self.models_loaded:
-            return {'success': False, 'message': 'Models not loaded'}
+        # Initialize models with selected types
+        if not self.initialize_models(person_model, face_model):
+            return {'success': False, 'message': 'Failed to initialize models'}
         
         try:
-            print(f"🎬 Processing video: {video_path}")
+            print(f"🎬 Processing video: {video_path} with {person_model.upper()} + {face_model.upper()}")
             
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
@@ -373,11 +382,13 @@ class CrowdMonitoringSystem:
             return {'success': False, 'message': str(e)}
     
     def calculate_crowd_density(self, person_count):
+        thresholds = MODEL_CONFIG['crowd']['density_thresholds']
+        
         if person_count == 0:
             return 'EMPTY'
-        elif person_count <= 2:
+        elif person_count <= thresholds['low']:
             return 'LOW'
-        elif person_count <= 5:
+        elif person_count <= thresholds['medium']:
             return 'MEDIUM'
         else:
             return 'HIGH'
@@ -430,6 +441,12 @@ def upload_image():
         if not allowed_file(file.filename, 'image'):
             return jsonify({'success': False, 'message': 'Invalid file type. Use JPG, PNG, BMP, or WEBP'})
         
+        # Get model selection parameters
+        person_model = request.form.get('person_model', 'yolov8')
+        face_model = request.form.get('face_model', 'mediapipe')
+        
+        print(f"🤖 Model selection - Person: {person_model}, Face: {face_model}")
+        
         # Save uploaded file
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -439,13 +456,8 @@ def upload_image():
         
         print(f"📁 Image uploaded: {file_path}")
         
-        # Initialize models if needed
-        if not monitor_system.models_loaded:
-            if not monitor_system.initialize_models():
-                return jsonify({'success': False, 'message': 'Failed to initialize AI models'})
-        
-        # Process image
-        result = monitor_system.process_image(file_path)
+        # Process image with selected models
+        result = monitor_system.process_image(file_path, person_model, face_model)
         
         if result['success']:
             return jsonify({
@@ -476,6 +488,12 @@ def upload_video():
         if not allowed_file(file.filename, 'video'):
             return jsonify({'success': False, 'message': 'Invalid file type. Use MP4, AVI, MOV, MKV, or WEBM'})
         
+        # Get model selection parameters
+        person_model = request.form.get('person_model', 'yolov8')
+        face_model = request.form.get('face_model', 'mediapipe')
+        
+        print(f"🤖 Model selection - Person: {person_model}, Face: {face_model}")
+        
         # Save uploaded file
         filename = secure_filename(file.filename)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -485,11 +503,7 @@ def upload_video():
         
         print(f"📁 Video uploaded: {file_path}")
         
-        # Initialize models if needed
-        if not monitor_system.models_loaded:
-            if not monitor_system.initialize_models():
-                return jsonify({'success': False, 'message': 'Failed to initialize AI models'})
-        
+        # Return success for upload, processing will be handled by WebSocket
         return jsonify({
             'success': True,
             'message': 'Video uploaded successfully - processing will start',
@@ -517,11 +531,14 @@ def download_file(filename):
 @socketio.on('start_video_processing')
 def handle_start_video_processing(data):
     video_path = data.get('file_path')
-    print(f"📨 Starting video processing: {video_path}")
+    person_model = data.get('person_model', 'yolov8')
+    face_model = data.get('face_model', 'mediapipe')
+    
+    print(f"📨 Starting video processing: {video_path} with {person_model.upper()} + {face_model.upper()}")
     
     # Process video in background thread
     def process_video_background():
-        result = monitor_system.process_video(video_path)
+        result = monitor_system.process_video(video_path, person_model, face_model)
         emit('video_processing_complete', result)
     
     thread = threading.Thread(target=process_video_background, daemon=True)
