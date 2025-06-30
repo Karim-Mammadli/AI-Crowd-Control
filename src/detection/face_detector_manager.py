@@ -21,9 +21,9 @@ class FaceDetectorManager:
         if detector_type == 'mediapipe':
             from src.detection.face_detector import FaceDetector
             return FaceDetector()
-        elif detector_type == 'retinaface':
-            from src.detection.retinaface_detector import RetinaFaceDetector
-            return RetinaFaceDetector()
+        elif detector_type == 'insightface':
+            from src.detection.insightface_detector import InsightFaceDetector
+            return InsightFaceDetector()
         else:
             print(f"⚠️ Unknown detector type: {detector_type}, falling back to MediaPipe")
             from src.detection.face_detector import FaceDetector
@@ -32,14 +32,5 @@ class FaceDetectorManager:
     @staticmethod
     def get_available_detectors():
         """Get list of available detector types."""
-        detectors = ['mediapipe']
-        
-        # Check if RetinaFace is available
-        try:
-            from retinaface import RetinaFace
-            detectors.append('retinaface')
-            print("✅ RetinaFace face detection available")
-        except ImportError:
-            print("⚠️ RetinaFace face detection not available (install: pip install retinaface-pytorch)")
-        
+        detectors = ['mediapipe', 'insightface']
         return detectors 

@@ -83,7 +83,7 @@ class CrowdMonitoringSystem:
         
         # Current model selections
         self.current_person_model = 'yolov8'
-        self.current_face_model = 'mediapipe'
+        self.current_face_model = 'insightface'
     
     def update_progress(self, step, total, message):
         """Update loading progress bar."""
@@ -96,7 +96,7 @@ class CrowdMonitoringSystem:
         })
         print(f"📊 Progress: {progress}% - {message}")
     
-    def initialize_models(self, person_model='yolov8', face_model='mediapipe'):
+    def initialize_models(self, person_model='yolov8', face_model='insightface'):
         with self._initialization_lock:
             if self.models_loaded and self.current_person_model == person_model and self.current_face_model == face_model:
                 print("✅ Models already loaded with same configuration")
@@ -443,7 +443,7 @@ def upload_image():
         
         # Get model selection parameters
         person_model = request.form.get('person_model', 'yolov8')
-        face_model = request.form.get('face_model', 'mediapipe')
+        face_model = request.form.get('face_model', 'insightface')
         
         print(f"🤖 Model selection - Person: {person_model}, Face: {face_model}")
         
@@ -490,7 +490,7 @@ def upload_video():
         
         # Get model selection parameters
         person_model = request.form.get('person_model', 'yolov8')
-        face_model = request.form.get('face_model', 'mediapipe')
+        face_model = request.form.get('face_model', 'insightface')
         
         print(f"🤖 Model selection - Person: {person_model}, Face: {face_model}")
         
@@ -532,7 +532,7 @@ def download_file(filename):
 def handle_start_video_processing(data):
     video_path = data.get('file_path')
     person_model = data.get('person_model', 'yolov8')
-    face_model = data.get('face_model', 'mediapipe')
+    face_model = data.get('face_model', 'insightface')
     
     print(f"📨 Starting video processing: {video_path} with {person_model.upper()} + {face_model.upper()}")
     

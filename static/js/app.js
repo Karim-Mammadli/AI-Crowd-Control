@@ -810,6 +810,6 @@ function updateModelStatus() {
     const statusElement = document.getElementById('modelStatus');
     
     if (statusElement) {
-        statusElement.innerHTML = `🤖 Models: Ready to load | 👥 ${models.person_model.toUpperCase()} + 👤 ${models.face_model.toUpperCase()}`;
+        statusElement.innerHTML = `🤖 Models: Ready to load | 👥 ${models.person_model.toUpperCase()} + 👤 ${models.face_model.toUpperCase()} + 👤 ${models.face_model.toUpperCase()}`;
     }
 }
