@@ -92,6 +92,24 @@ function initializeSocket() {
         handleSystemStatus(data);
     });
     
+    socket.on('model_fallback', function(data) {
+        console.log('⚠️ Model fallback detected:', data);
+        showStatus(`⚠️ ${data.message}`, 'warning');
+        
+        // Update the model status to show actual model being used
+        const statusElement = document.getElementById('modelStatus');
+        if (statusElement) {
+            let actualModelDisplay = data.actual_model.toUpperCase();
+            if (data.actual_model === 'yolov11m') {
+                actualModelDisplay = 'YOLOv11m (Latest)';
+            } else if (data.actual_model === 'yolov8') {
+                actualModelDisplay = 'YOLOv8';
+            }
+            
+            statusElement.innerHTML = `🤖 Models: Ready | 👥 ${actualModelDisplay} (Fallback) + 👤 MediaPipe (Fast)`;
+        }
+    });
+    
     socket.on('video_detection', function(data) {
         // Store detection by frame index
         videoDetections[data.frame_index] = data;
@@ -579,7 +597,8 @@ function handleSystemStatus(data) {
     } else if (status === 'ready') {
         modelsLoaded = true;
         showStatus('✅ ' + data.message, 'success');
-        modelStatus.innerHTML = '✅ AI Models Ready: YOLOv8 + MediaPipe loaded';
+        // Update model status with actual selected models
+        updateModelStatus();
     } else if (status === 'error') {
         modelsLoaded = false;
         showStatus('❌ ' + data.message, 'error');
@@ -810,6 +829,19 @@ function updateModelStatus() {
     const statusElement = document.getElementById('modelStatus');
     
     if (statusElement) {
-        statusElement.innerHTML = `🤖 Models: Ready to load | 👥 ${models.person_model.toUpperCase()} + 👤 ${models.face_model.toUpperCase()} + 👤 ${models.face_model.toUpperCase()}`;
+        let personModelDisplay = models.person_model.toUpperCase();
+        if (models.person_model === 'yolov11m') {
+            personModelDisplay = 'YOLOv11m (Latest)';
+        } else if (models.person_model === 'yolov8') {
+            personModelDisplay = 'YOLOv8';
+        }
+        
+        let faceModelDisplay = models.face_model.toUpperCase();
+        if (models.face_model === 'mediapipe') {
+            faceModelDisplay = 'MediaPipe (Fast)';
+        }
+        
+        const statusText = modelsLoaded ? 'Ready' : 'Ready to load';
+        statusElement.innerHTML = `🤖 Models: ${statusText} | 👥 ${personModelDisplay} + 👤 ${faceModelDisplay}`;
     }
 }

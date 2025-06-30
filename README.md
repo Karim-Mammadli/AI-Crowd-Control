@@ -60,10 +60,10 @@ python app.py
 ```
 
 
-#### 1. **PRIMARY OBJECT DETECTION: YOLOv11 (Latest)**
-- **Performance:** 54.4 mAP on COCO, fastest inference speed
+#### 1. **PRIMARY OBJECT DETECTION: YOLOv8/YOLOv11m (Latest)**
+- **Performance:** YOLOv8: 54.4 mAP, YOLOv11m: Latest and most accurate
 - **Advantages:** Real-time performance, excellent accuracy, mature ecosystem
-- **Why chosen:** Fast, small, pretty accurate
+- **Why chosen:** Fast, small, pretty accurate, with YOLOv11m as the latest option
 - **Use Case:** Person detection, crowd counting, real-time processing
 
 #### 2. **SECONDARY DETECTION: RT-DETR (Optional Transformer-based)**

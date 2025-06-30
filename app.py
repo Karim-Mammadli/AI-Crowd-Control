@@ -127,7 +127,18 @@ class CrowdMonitoringSystem:
                 # Step 3: Load YOLO model
                 self.update_progress(3, total_steps, f"Loading {person_model.upper()} person detection model...")
                 print(f"🔄 Loading {person_model.upper()} model...")
-                self.yolo_detector = YOLODetector(MODEL_CONFIG['yolo']['model_path'])
+                print(f"📋 Model selection: {person_model}")
+                self.yolo_detector = YOLODetector(person_model)
+                print(f"✅ {person_model.upper()} model loaded successfully: {self.yolo_detector.model_name}")
+                
+                # Update frontend with actual model being used (in case of fallback)
+                if self.yolo_detector.model_name != person_model:
+                    print(f"⚠️ Model fallback detected: requested {person_model}, using {self.yolo_detector.model_name}")
+                    socketio.emit('model_fallback', {
+                        'requested_model': person_model,
+                        'actual_model': self.yolo_detector.model_name,
+                        'message': f'Model {person_model} not available, using {self.yolo_detector.model_name} instead'
+                    })
                 
                 # Step 4: Load face detection model
                 self.update_progress(4, total_steps, f"Loading {face_model.upper()} face detection model...")
@@ -169,7 +180,8 @@ class CrowdMonitoringSystem:
             return {'success': False, 'message': 'Failed to initialize models'}
         
         try:
-            print(f"🖼️ Processing image: {image_path} with {person_model.upper()} + {face_model.upper()}")
+            print(f"🖼️ Processing image: {image_path}")
+            print(f"🤖 Using models - Person: {self.yolo_detector.model_name}, Face: {face_model}")
             
             #what is this?
             # Load image
@@ -183,8 +195,8 @@ class CrowdMonitoringSystem:
             person_detections = self.yolo_detector.detect_persons(frame)
             face_detections = self.face_detector.detect_faces(frame)
             
-            print(f"👥 Found {len(person_detections)} people")
-            print(f"👤 Found {len(face_detections)} faces")
+            print(f"👥 Found {len(person_detections)} people using {self.yolo_detector.model_name}")
+            print(f"👤 Found {len(face_detections)} faces using {face_model}")
             
             # Draw detections on image
             result_frame = frame.copy()
@@ -265,7 +277,8 @@ class CrowdMonitoringSystem:
             return {'success': False, 'message': 'Failed to initialize models'}
         
         try:
-            print(f"🎬 Processing video: {video_path} with {person_model.upper()} + {face_model.upper()}")
+            print(f"🎬 Processing video: {video_path}")
+            print(f"🤖 Using models - Person: {self.yolo_detector.model_name}, Face: {face_model}")
             
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
@@ -278,6 +291,7 @@ class CrowdMonitoringSystem:
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             
             print(f"📹 Video: {width}x{height}, {fps} FPS, {frame_count} frames")
+            print(f"🔍 Detection models active: {self.yolo_detector.model_name} + {face_model}")
             
             # Prepare output video
             filename = os.path.basename(video_path)

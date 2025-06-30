@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 import torch
+from src.utils.config import MODEL_CONFIG
+import os
 
 # class YOLOFaceDetector:
 #     def __init__(self, model_name='yolov8n.pt'):
@@ -109,16 +111,50 @@ class YOLODetector:
         """Initialize YOLO detector with debugging."""
         print(f"🔄 Initializing YOLO detector with model: {model_name}")
         
+        # Store the model name for later use
+        self.model_name = model_name
+        
         try:
-            self.model = YOLO(model_name)
+            # Handle different model types
+            if model_name == 'yolov11m':
+                model_path = MODEL_CONFIG['yolo']['yolov11m']['model_path']
+                print(f"🚀 Loading YOLOv11m model: {model_path}")
+                if not os.path.exists(model_path):
+                    raise FileNotFoundError(f"YOLOv11m model not found at {model_path}")
+            elif model_name == 'yolov8':
+                # Use default YOLOv8 model
+                model_path = MODEL_CONFIG['yolo']['model_path']
+                print(f"🚀 Loading YOLOv8 model: {model_path}")
+            else:
+                # Use provided model name directly
+                model_path = model_name
+                print(f"🚀 Loading custom model: {model_path}")
+            
+            # Try to load the model
+            try:
+                self.model = YOLO(model_path)
+                print(f"✅ YOLO model loaded successfully")
+            except Exception as model_error:
+                print(f"⚠️ Model loading failed, attempting to download: {model_error}")
+                # Try to download the model if it doesn't exist
+                try:
+                    print(f"📥 Downloading model: {model_path}")
+                    self.model = YOLO(model_path)  # This should trigger download
+                    print(f"✅ Model downloaded and loaded successfully")
+                except Exception as download_error:
+                    print(f"❌ Failed to download model: {download_error}")
+                    # Fallback to YOLOv8 if YOLOv11m fails
+                    if model_name == 'yolov11m':
+                        print(f"🔄 Falling back to YOLOv8 model...")
+                        fallback_path = MODEL_CONFIG['yolo']['model_path']
+                        self.model = YOLO(fallback_path)
+                        self.model_name = 'yolov8'  # Update model name to reflect fallback
+                        print(f"✅ Fallback to YOLOv8 successful")
+                    else:
+                        raise download_error
+            
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
             print(f"✅ YOLO model loaded successfully on {self.device}")
-            
-            # Test the model with a dummy image
-            print("🧪 Testing YOLO model with dummy image...")
-            dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)
-            test_results = self.model(dummy_img, verbose=False)
-            print(f"✅ YOLO model test successful - {len(test_results)} result(s)")
             
         except Exception as e:
             print(f"❌ YOLO initialization error: {e}")
@@ -132,9 +168,15 @@ class YOLODetector:
                 return []
             
             print(f"🔍 YOLO processing frame: {frame.shape}")
+            print(f"🤖 Active model: {self.model_name}")
             
-            # Get confidence threshold from config
-            conf_threshold = MODEL_CONFIG['yolo']['confidence_threshold']
+            # Get confidence threshold from config based on model type
+            if hasattr(self, 'model_name') and self.model_name == 'yolov11m':
+                conf_threshold = MODEL_CONFIG['yolo']['yolov11m']['confidence_threshold']
+                print(f"⚙️ Using YOLOv11m confidence threshold: {conf_threshold}")
+            else:
+                conf_threshold = MODEL_CONFIG['yolo']['confidence_threshold']
+                print(f"⚙️ Using YOLOv8 confidence threshold: {conf_threshold}")
             
             # Run detection with specific parameters
             results = self.model(
@@ -174,7 +216,7 @@ class YOLODetector:
             else:
                 print("📦 YOLO returned no results")
             
-            print(f"🎯 YOLO final detections: {len(detections)}")
+            print(f"🎯 YOLO final detections: {len(detections)} using {self.model_name}")
             for i, det in enumerate(detections):
                 print(f"   Final {i}: {det}")
             
@@ -205,4 +247,25 @@ class YOLODetector:
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         
         return frame
+
+    def get_model_info(self):
+        """Get information about the current model."""
+        info = {
+            'model_name': self.model_name,
+            'device': self.device,
+            'model_path': getattr(self.model, 'ckpt_path', 'Unknown'),
+            'confidence_threshold': MODEL_CONFIG['yolo']['yolov11m']['confidence_threshold'] if self.model_name == 'yolov11m' else MODEL_CONFIG['yolo']['confidence_threshold']
+        }
+        return info
+    
+    def print_model_info(self):
+        """Print detailed model information to console."""
+        info = self.get_model_info()
+        print("🤖 Model Information:")
+        print(f"   📋 Model Name: {info['model_name']}")
+        print(f"   🔧 Device: {info['device']}")
+        print(f"   📁 Model Path: {info['model_path']}")
+        print(f"   ⚙️ Confidence Threshold: {info['confidence_threshold']}")
+        print(f"   🎯 Model Type: {'YOLOv11m (Latest)' if info['model_name'] == 'yolov11m' else 'YOLOv8 (Recommended)'}")
+
 # face_detector = YOLOFaceDetector()  # This will use yolov8n.pt which is available for download

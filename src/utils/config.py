@@ -10,6 +10,11 @@ MODEL_CONFIG = {
         'model_path': 'yolov8n.pt',  # Path to YOLO model file
         'confidence_threshold': 0.3,  # Confidence threshold for person detection
         'batch_size': 10,            # Number of frames to process in batch
+        # YOLOv11m specific settings
+        'yolov11m': {
+            'model_path': 'yolo11m.pt',  # Path to YOLOv11m model file (actual filename in project)
+            'confidence_threshold': 0.3,   # Confidence threshold for person detection
+        },
     },
     
     # Face Detection Settings

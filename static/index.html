@@ -12,7 +12,7 @@
     <div class="container">
         <div class="header">
             <h1>🔍 AI Crowd Monitoring System</h1>
-            <p>Real-time person & face detection powered by YOLOv8 + MediaPipe</p>
+            <p>Real-time person & face detection powered by YOLOv8/YOLOv11m + MediaPipe/RetinaFace</p>
             <div class="model-status" id="modelStatus">
                 🤖 Models: Ready to load | 👥 Person Detection + 👤 Face Detection
             </div>
@@ -50,6 +50,7 @@
                         <label for="personModel">👥 Person Detection:</label>
                         <select id="personModel" class="model-select">
                             <option value="yolov8">YOLOv8 (Recommended)</option>
+                            <option value="yolov11m">YOLOv11m (Latest & Most Accurate)</option>
                         </select>
                     </div>
                     <div class="model-option">
