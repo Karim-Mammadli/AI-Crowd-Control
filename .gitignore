@@ -74,6 +74,7 @@ coverage.xml
 !models/*
 !models/**/*
 !yolov8n.pt
+!yolo11m.pt
 
 # Allow specific files in demo
 !demo/index.html
