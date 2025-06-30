@@ -114,6 +114,13 @@ function initializeSocket() {
         // Store detection by frame index
         videoDetections[data.frame_index] = data;
     });
+
+    socket.on('live_frame', function(data) {
+        const liveFeed = document.getElementById('liveFeed');
+        if (liveFeed) {
+            liveFeed.src = 'data:image/jpeg;base64,' + data.frame;
+        }
+    });
 }
 
 function initializeUploadHandlers() {
@@ -314,8 +321,13 @@ function handleVideoUpload(file) {
             showStatus('🎬 Video uploaded! Starting AI analysis...', 'success');
             document.getElementById('mediaTitle').textContent = '🎬 Analyzing Video...';
             
+            // Switch to live feed view
+            document.getElementById('uploadedVideo').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('liveFeed').style.display = 'block';
+
             // Trigger server-side processing with model selection
-            socket.emit('start_video_processing', { 
+            socket.emit('start_video_processing', {
                 file_path: data.file_path,
                 person_model: selectedModels.person_model,
                 face_model: selectedModels.face_model
@@ -435,6 +447,17 @@ function handleVideoProcessingComplete(data) {
         // Hide video progress bar
         const videoProgressContainer = document.getElementById('videoProgressContainer');
         videoProgressContainer.classList.remove('active');
+
+        // Switch back from live feed to the final video player
+        const liveFeed = document.getElementById('liveFeed');
+        const uploadedVideo = document.getElementById('uploadedVideo');
+        liveFeed.style.display = 'none';
+        liveFeed.src = ''; // Clear the image to save memory
+        uploadedVideo.style.display = 'block';
+        
+        // Load the processed video for playback
+        uploadedVideo.src = `/download/${currentProcessedFile}`;
+        uploadedVideo.load();
         
     } else {
         showStatus('❌ Video processing failed: ' + data.message, 'error');
