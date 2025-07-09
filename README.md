@@ -2,8 +2,8 @@
 
 ## 🎯 What It Does (So Far)
 
-- **Person Detection**: YOLOv8-powered people counting
-- **Face Recognition**: MediaPipe engagement analysis
+- **Person Detection**: YOLOv8n.pt (nano model) and yolov11m.pt (medium model)
+- **Face Recognition**: MediaPipe and SCRFD (insightface's default)
 - **Crowd Analytics**: Density assessment, risk evaluation, flow patterns
 
 ## Industry Use Cases
@@ -115,7 +115,7 @@ python app.py
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                        AI CROWD MONITORING SYSTEM                               │
-│                            (Hackathon Edition)                                  │
+│                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────┐    ┌────────────────────────────────────────────────────────────┐
