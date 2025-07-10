@@ -4,12 +4,16 @@ import warnings
 import cv2
 import numpy as np
 from werkzeug.utils import secure_filename
-import base64
+# import base64 for base64 image
 import tempfile
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['GLOG_minloglevel'] = '2'
 warnings.filterwarnings('ignore', category=UserWarning, module='mediapipe')
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 from flask import Flask, send_from_directory, request, jsonify
 from src.utils.config import MODEL_CONFIG, PATHS, ALLOWED_EXTENSIONS
@@ -96,87 +100,100 @@ class CrowdMonitoringSystem:
         })
         print(f"📊 Progress: {progress}% - {message}")
     
-    def initialize_models(self, person_model='yolov8', face_model='insightface'):
-        with self._initialization_lock:
-            if self.models_loaded and self.current_person_model == person_model and self.current_face_model == face_model:
-                print("✅ Models already loaded with same configuration")
-                return True
-                
-            if self.is_initializing:
-                print("⏳ Models already initializing...")
-                return False
-                
-            self.is_initializing = True
+    def initialize_models(self, person_model='yolov8', face_model='insightface', need_video_processor=False):
+        """Initialize AI models with progress tracking."""
+        if self.is_initializing:
+            print("⚠️ Models already initializing, skipping...")
+            return False
             
-            try:
-                print(f"📥 Starting AI model initialization... Person: {person_model}, Face: {face_model}")
-                total_steps = 4
-                
-                # Step 1: Import modules
-                self.update_progress(1, total_steps, "Importing detection modules...")
-                YOLODetector, FaceDetectorManager, VideoProcessor = load_detection_modules()
-                if None in [YOLODetector, FaceDetectorManager, VideoProcessor]:
-                    print("Failed to load one or more detection modules")
-                    return False
-                
-                # Step 2: Initialize video processor (for camera if needed)
+        # Check if models are already loaded with the same configuration
+        if self.models_loaded and self.current_person_model == person_model and self.current_face_model == face_model:
+            print("✅ Models already loaded with same configuration")
+            return True
+            
+        # If models are loaded but with different configuration, reload them
+        if self.models_loaded:
+            print(f"🔄 Reloading models: {self.current_person_model}->{person_model}, {self.current_face_model}->{face_model}")
+            self.models_loaded = False
+            
+        self.is_initializing = True
+        total_steps = 4 if need_video_processor else 3
+        
+        try:
+            print("📥 Starting AI model initialization...", f"Person: {person_model}, Face: {face_model}")
+            socketio.emit('system_status', {
+                'status': 'loading', 
+                'message': f'Loading AI models - {person_model.upper()} + {face_model.upper()}'
+            })
+            
+            # Step 1: Import detection modules
+            self.update_progress(1, total_steps, "Importing detection modules...")
+            YOLODetector, FaceDetectorManager, VideoProcessor = load_detection_modules()
+            if None in [YOLODetector, FaceDetectorManager, VideoProcessor]:
+                print("❌ Failed to load detection modules")
+                return False
+            
+            # Step 2: Initialize video processor (only if needed)
+            if need_video_processor:
                 self.update_progress(2, total_steps, "Initializing video processor...")
                 print("🎥 Initializing video processor...")
                 self.video_processor = VideoProcessor()
-                
-                # Step 3: Load YOLO model
-                self.update_progress(3, total_steps, f"Loading {person_model.upper()} person detection model...")
-                print(f"🔄 Loading {person_model.upper()} model...")
-                print(f"📋 Model selection: {person_model}")
-                self.yolo_detector = YOLODetector(person_model)
-                print(f"✅ {person_model.upper()} model loaded successfully: {self.yolo_detector.model_name}")
-                
-                # Update frontend with actual model being used (in case of fallback)
-                if self.yolo_detector.model_name != person_model:
-                    print(f"⚠️ Model fallback detected: requested {person_model}, using {self.yolo_detector.model_name}")
-                    socketio.emit('model_fallback', {
-                        'requested_model': person_model,
-                        'actual_model': self.yolo_detector.model_name,
-                        'message': f'Model {person_model} not available, using {self.yolo_detector.model_name} instead'
-                    })
-                
-                # Step 4: Load face detection model
-                self.update_progress(4, total_steps, f"Loading {face_model.upper()} face detection model...")
-                print(f"👤 Loading {face_model.upper()} face detection...")
-                self.face_detector_manager = FaceDetectorManager()
-                self.face_detector = self.face_detector_manager.create_detector(face_model)
-                
-                # Complete
-                self.update_progress(4, total_steps, f"All AI models loaded - {person_model.upper()} + {face_model.upper()} ready!")
-                print("✅ All models loaded successfully!")
-                
-                socketio.emit('system_status', {
-                    'status': 'ready', 
-                    'message': f'All AI models loaded - {person_model.upper()} + {face_model.upper()} ready to monitor!'
+            
+            # Step 3: Load YOLO model
+            step_num = 3 if need_video_processor else 2
+            self.update_progress(step_num, total_steps, f"Loading {person_model.upper()} person detection model...")
+            print(f"🔄 Loading {person_model.upper()} model...")
+            print(f"📋 Person Model selection: {person_model}")
+            self.yolo_detector = YOLODetector(person_model)
+            print(f"✅ {person_model.upper()} model loaded successfully: {self.yolo_detector.model_name}")
+            
+            # Update frontend with actual model being used (in case of fallback)
+            if self.yolo_detector.model_name != person_model:
+                print(f"⚠️ Model fallback detected: requested {person_model}, using {self.yolo_detector.model_name}")
+                socketio.emit('model_fallback', {
+                    'requested_model': person_model,
+                    'actual_model': self.yolo_detector.model_name,
+                    'message': f'Model {person_model} not available, using {self.yolo_detector.model_name} instead'
                 })
-                
-                self.models_loaded = True
-                self.current_person_model = person_model
-                self.current_face_model = face_model
-                self.is_initializing = False
-                return True
-                
-            except Exception as e:
-                print(f"❌ Model loading error: {e}")
-                socketio.emit('system_status', {
-                    'status': 'error', 
-                    'message': f'Model loading failed: {str(e)}'
-                })
-                self.is_initializing = False
-                self.models_loaded = False
-                return False
+            
+            # Step 4: Load face detection model
+            step_num = 4 if need_video_processor else 3
+            self.update_progress(step_num, total_steps, f"Loading {face_model.upper()} face detection model...")
+            print(f"👤 Loading {face_model.upper()} face detection...")
+            self.face_detector_manager = FaceDetectorManager()
+            self.face_detector = self.face_detector_manager.create_detector(face_model)
+            
+            # Complete
+            self.update_progress(step_num, total_steps, f"All AI models loaded - {person_model.upper()} + {face_model.upper()} ready!")
+            print("✅ All models loaded successfully!")
+            
+            socketio.emit('system_status', {
+                'status': 'ready', 
+                'message': f'All AI models loaded - {person_model.upper()} + {face_model.upper()} ready to monitor!'
+            })
+            
+            self.models_loaded = True
+            self.current_person_model = person_model
+            self.current_face_model = face_model
+            self.is_initializing = False
+            return True
+            
+        except Exception as e:
+            print(f"❌ Model loading error: {e}")
+            socketio.emit('system_status', {
+                'status': 'error', 
+                'message': f'Model loading failed: {str(e)}'
+            })
+            self.is_initializing = False
+            self.models_loaded = False
+            return False
     
    
  
     def process_image(self, image_path, person_model='yolov8', face_model='mediapipe'):
         """Process a single image and return results."""
-        # Initialize models with selected types
-        if not self.initialize_models(person_model, face_model):
+        # Initialize models with selected types (no video processor needed for images)
+        if not self.initialize_models(person_model, face_model, need_video_processor=False):
             return {'success': False, 'message': 'Failed to initialize models'}
         
         try:
@@ -242,8 +259,8 @@ class CrowdMonitoringSystem:
                 cv2.imwrite(processed_path, result_frame)
             
             # Convert to base64 for frontend display
-            _, buffer = cv2.imencode('.jpg', result_frame)
-            img_base64 = base64.b64encode(buffer).decode('utf-8')
+            # _, buffer = cv2.imencode('.jpg', result_frame) for base64 image
+            # img_base64 = base64.b64encode(buffer).decode('utf-8')
             
             # Update stats
             self.stats.update({
@@ -260,7 +277,7 @@ class CrowdMonitoringSystem:
             
             return {
                 'success': True,
-                'processed_image': img_base64,
+                # 'processed_image': img_base64, for base64 image
                 'processed_path': processed_path,
                 'processed_filename': processed_filename,
                 'stats': self.stats
@@ -272,8 +289,8 @@ class CrowdMonitoringSystem:
     
     def process_video(self, video_path, person_model='yolov8', face_model='mediapipe'):
         """Process video and emit real-time updates."""
-        # Initialize models with selected types
-        if not self.initialize_models(person_model, face_model):
+        # Initialize models with selected types (video processor needed for video processing)
+        if not self.initialize_models(person_model, face_model, need_video_processor=True):
             return {'success': False, 'message': 'Failed to initialize models'}
         
         try:
@@ -477,9 +494,9 @@ def upload_image():
             return jsonify({
                 'success': True,
                 'message': 'Image processed successfully',
-                'processed_image': result['processed_image'],
+                # 'processed_image': result['processed_image'], for base64 image
                 'stats': result['stats'],
-                'processed_path': result['processed_path'],
+                # 'processed_path': result['processed_path'], for base64 image
                 'processed_filename': result['processed_filename']
             })
         else:
@@ -539,6 +556,19 @@ def download_file(filename):
         return send_from_directory(PATHS['processed'], filename, as_attachment=True)
     except Exception as e:
         print(f"❌ Download error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/processed/<filename>')
+def serve_processed_image(filename):
+    """Serve processed images for display."""
+    try:
+        # Ensure the filename is secure and exists in the processed folder
+        if not os.path.exists(os.path.join(PATHS['processed'], filename)):
+            return jsonify({'success': False, 'message': 'Image not found'}), 404
+        
+        return send_from_directory(PATHS['processed'], filename)
+    except Exception as e:
+        print(f"❌ Image serve error: {e}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # WebSocket handlers

@@ -393,9 +393,10 @@ function showVideoPreview(file) {
 function displayImageResults(data, originalFile) {
     console.log('🖼️ Displaying image analysis results');
     
-    // Update processed image with results
+    // Update processed image with results using file path
     const processedImage = document.getElementById('processedImage');
-    processedImage.src = 'data:image/jpeg;base64,' + data.processed_image;
+    // processedImage.src = 'data:image/jpeg;base64,' + data.processed_image; for base64 image
+    processedImage.src = '/processed/' + data.processed_filename;
     processedImage.style.opacity = '1';
     
     // Update stats immediately

@@ -161,7 +161,7 @@ class YOLODetector:
             raise e
     
     def detect_persons(self, frame):
-        """Detect persons in frame with extensive debugging."""
+        """Detect persons in frame with cleaner debugging."""
         try:
             if frame is None:
                 print("⚠️ YOLO received None frame")
@@ -199,16 +199,15 @@ class YOLODetector:
                     
                     print(f"📦 YOLO found {len(boxes)} potential detections")
                     
+                    # Process detections with cleaner output
                     for i, (box, score) in enumerate(zip(boxes, scores)):
-                        print(f"   Detection {i}: confidence={score:.3f}, box={box}")
-                        
                         if score > conf_threshold:  # Use config threshold
                             detections.append({
                                 'bbox': [int(x) for x in box],
                                 'confidence': float(score),
                                 'class': 'person'
                             })
-                            print(f"   ✅ Added detection {i} (conf: {score:.3f})")
+                            print(f"   ✅ Detection {i}: conf={score:.3f}, bbox=[{int(box[0])}, {int(box[1])}, {int(box[2])}, {int(box[3])}]")
                         else:
                             print(f"   ❌ Skipped detection {i} (conf too low: {score:.3f})")
                 else:
@@ -217,8 +216,6 @@ class YOLODetector:
                 print("📦 YOLO returned no results")
             
             print(f"🎯 YOLO final detections: {len(detections)} using {self.model_name}")
-            for i, det in enumerate(detections):
-                print(f"   Final {i}: {det}")
             
             return detections
             
