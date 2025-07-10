@@ -35,6 +35,9 @@ class FaceDetector:
                 'center': (x, y)
             }
         """
+        print(f"🔍 MediaPipe processing frame: {image.shape}")
+        print(f"⚙️ Using MediaPipe confidence threshold: {MODEL_CONFIG['face']['mediapipe']['confidence_threshold']}")
+        
         # Convert BGR to RGB
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
@@ -44,8 +47,9 @@ class FaceDetector:
         detections = []
         if results.detections:
             height, width = image.shape[:2]
+            print(f"📦 MediaPipe found {len(results.detections)} potential faces")
             
-            for detection in results.detections:
+            for i, detection in enumerate(results.detections):
                 # Get bounding box
                 bbox = detection.location_data.relative_bounding_box
                 x1 = int(bbox.xmin * width)
@@ -63,12 +67,20 @@ class FaceDetector:
                 center_x = (x1 + x2) // 2
                 center_y = (y1 + y2) // 2
                 
-                detections.append({
+                confidence = detection.score[0]
+                if confidence >= MODEL_CONFIG['face']['mediapipe']['confidence_threshold']:
+                    detections.append({
                     'bbox': [x1, y1, x2, y2],
-                    'confidence': detection.score[0],
+                        'confidence': confidence,
                     'center': (center_x, center_y)
                 })
+                    print(f"   ✅ Face {i}: conf={confidence:.3f}, bbox=[{x1}, {y1}, {x2}, {y2}]")
+                else:
+                    print(f"   ❌ Skipped face {i} (conf too low: {confidence:.3f})")
+        else:
+            print("📦 MediaPipe found no faces")
         
+        print(f"🎯 MediaPipe final detections: {len(detections)}")
         return detections
     
     def __del__(self):

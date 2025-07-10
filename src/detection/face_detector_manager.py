@@ -11,7 +11,7 @@ class FaceDetectorManager:
         Create a face detector based on the specified type.
         
         Args:
-            detector_type (str): Type of detector ('mediapipe', 'retinaface')
+            detector_type (str): Type of detectors ('mediapipe', 'insightface')
             
         Returns:
             Face detector instance
