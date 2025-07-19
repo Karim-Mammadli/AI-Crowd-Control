@@ -139,7 +139,7 @@ class CrowdMonitoringSystem:
                 print("🎥 Initializing video processor...")
                 self.video_processor = VideoProcessor()
             
-            # Step 3: Load YOLO model
+            # Step 3: Load person detection model
             step_num = 3 if need_video_processor else 2
             self.update_progress(step_num, total_steps, f"Loading {person_model.upper()} person detection model...")
             print(f"🔄 Loading {person_model.upper()} model...")
@@ -207,6 +207,7 @@ class CrowdMonitoringSystem:
                 return {'success': False, 'message': 'Could not load image'}
             
             print(f"📷 Image shape: {frame.shape}")
+            print(f"📷 Original image dimensions: {frame.shape[1]}x{frame.shape[0]} (width x height)")
             
             # Run detections
             person_detections = self.yolo_detector.detect_persons(frame)
@@ -248,15 +249,25 @@ class CrowdMonitoringSystem:
             #what is this?
             # Choose correct encoding for OpenCV
             if ext in ['.jpg', '.jpeg']:
-                cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+                cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 91])
             elif ext == '.png':
-                cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_PNG_COMPRESSION), 3])
+                # Use minimal compression to preserve quality
+                cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_PNG_COMPRESSION), 1])
             elif ext == '.bmp':
                 cv2.imwrite(processed_path, result_frame)
             elif ext == '.webp':
+                # Use good quality for WebP
                 cv2.imwrite(processed_path, result_frame, [int(cv2.IMWRITE_WEBP_QUALITY), 90])
             else:
                 cv2.imwrite(processed_path, result_frame)
+            
+            # Verify processed image dimensions
+            processed_img = cv2.imread(processed_path)
+            if processed_img is not None:
+                print(f"📷 Processed image dimensions: {processed_img.shape[1]}x{processed_img.shape[0]} (width x height)")
+                print(f"📷 Dimensions match: {frame.shape == processed_img.shape}")
+            else:
+                print(f"❌ Could not verify processed image dimensions")
             
             # Convert to base64 for frontend display
             # _, buffer = cv2.imencode('.jpg', result_frame) for base64 image
@@ -562,14 +573,22 @@ def download_file(filename):
 def serve_processed_image(filename):
     """Serve processed images for display."""
     try:
-        # Ensure the filename is secure and exists in the processed folder
-        if not os.path.exists(os.path.join(PATHS['processed'], filename)):
-            return jsonify({'success': False, 'message': 'Image not found'}), 404
+        full_path = os.path.join(PATHS['processed'], filename)
+        print(f"Serving processed image: {full_path}")
+        
+        if not os.path.exists(full_path):
+            print(f"❌ File not found: {full_path}")
+            return jsonify({'error': 'File not found'}), 404
+        
+        # Check image dimensions for debugging
+        img = cv2.imread(full_path)
+        if img is not None:
+            print(f"📷 Serving image dimensions: {img.shape[1]}x{img.shape[0]} (width x height)")
         
         return send_from_directory(PATHS['processed'], filename)
     except Exception as e:
-        print(f"❌ Image serve error: {e}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        print(f"❌ Error serving processed image: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # WebSocket handlers
 @socketio.on('start_video_processing')

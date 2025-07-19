@@ -108,6 +108,13 @@ python app.py
 - **Why chosen:** Perfect for real-time logging and explanations
 - **Use Case:** Activity description, alert generation
 
+
+#### Memory Management
+- YOLO models: Loaded into GPU/CPU memory
+- Face detection models: Loaded into memory
+- Model weights: Stored in RAM
+- Model configurations: Cached settings
+
 ---
 
 ## 🏗️ **COMPLETE SYSTEM ARCHITECTURE**

@@ -426,11 +426,15 @@ button:disabled {
 }
 
 #originalImage, #processedImage {
-    width: 48%;
-    margin: 1%;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    margin: 0 auto;
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 8px;
     transition: transform 0.3s ease;
+    object-fit: contain;
 }
 
 #originalImage:hover, #processedImage:hover {
@@ -807,8 +811,12 @@ button:disabled {
     }
     
     #originalImage, #processedImage {
-        width: 100%;
-        margin: 2% 0;
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        margin: 0 auto;
+        object-fit: contain;
     }
     
     .drop-zone {

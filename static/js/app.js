@@ -404,11 +404,15 @@ function showVideoPreview(file) {
 
 function displayImageResults(data, originalFile) {
     console.log('🖼️ Displaying image analysis results');
+    console.log('📊 Response data:', data);
+    console.log('📁 Processed filename:', data.processed_filename);
     
     // Update processed image with results using file path
     const processedImage = document.getElementById('processedImage');
     // processedImage.src = 'data:image/jpeg;base64,' + data.processed_image; for base64 image
-    processedImage.src = '/processed/' + data.processed_filename;
+    const imagePath = '/processed/' + data.processed_filename;
+    console.log('🖼️ Setting processed image src to:', imagePath);
+    processedImage.src = imagePath;
     processedImage.style.opacity = '1';
     
     // Update stats immediately

@@ -8,12 +8,12 @@ MODEL_CONFIG = {
     # YOLO Model Settings
     'yolo': {
         'model_path': 'yolov8n.pt',  # Path to YOLO model file
-        'confidence_threshold': 0.3,  # Confidence threshold for person detection
+        'confidence_threshold': 0.2,  # Confidence threshold for person detection
         'batch_size': 10,            # Number of frames to process in batch
         # YOLOv11m specific settings
         'yolov11m': {
             'model_path': 'yolo11m.pt',  # Path to YOLOv11m model file (actual filename in project)
-            'confidence_threshold': 0.3,   # Confidence threshold for person detection
+            'confidence_threshold': 0.2,   # Confidence threshold for person detection
         },
     },
     
@@ -24,13 +24,13 @@ MODEL_CONFIG = {
         
         # MediaPipe specific settings
         'mediapipe': {
-            'confidence_threshold': 0.3,  # Lower confidence threshold for better face detection in crowds
+            'confidence_threshold': 0.2,  # Lower confidence threshold for better face detection in crowds
             'model_selection': 1,         # 0 for short-range, 1 for full-range
         },
         
         # RetinaFace specific settings
         'retinaface': {
-            'confidence_threshold': 0.5,  # Lower confidence threshold for RetinaFace
+            'confidence_threshold': 0.3,  # Lower confidence threshold for RetinaFace
             'quality': 'normal',          # 'normal', 'high', 'low'
         },
     },
