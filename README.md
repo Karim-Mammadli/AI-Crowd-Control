@@ -2,7 +2,7 @@
 
 ## 🎯 What It Does (So Far)
 
-- **Person Detection**: YOLOv8n.pt (nano model) and yolov11m.pt (medium model)
+- **Person Detection**: YOLOv8n.pt (nano), YOLOv11n.pt (nano), YOLOv11s.pt (small), YOLOv11m.pt (medium), YOLOv11l.pt (large), YOLOv11x.pt (x large)
 - **Face Recognition**: MediaPipe and SCRFD (insightface's default)
 - **Crowd Analytics**: Density assessment, risk evaluation, flow patterns
 
@@ -60,11 +60,18 @@ python app.py
 ```
 
 
-#### 1. **PRIMARY OBJECT DETECTION: YOLOv8/YOLOv11m (Latest)**
-- **Performance:** YOLOv8: 54.4 mAP, YOLOv11m: Latest and most accurate
-- **Advantages:** Real-time performance, excellent accuracy, mature ecosystem
-- **Why chosen:** Fast, small, pretty accurate, with YOLOv11m as the latest option
+#### 1. **PRIMARY OBJECT DETECTION: YOLOv8/YOLOv11 Series**
+- **Performance:** YOLOv8n: 54.4 mAP, YOLOv11m: 56.8 mAP, YOLOv11l: 57.3 mAP, YOLOv11x: 57.8 mAP
+- **Advantages:** Real-time performance, excellent accuracy, mature ecosystem, multiple size options
+- **Why chosen:** Fast, accurate, with multiple model sizes for different performance needs
 - **Use Case:** Person detection, crowd counting, real-time processing
+- **Model Options:**
+  - **YOLOv8n**: Fastest, smallest (nano)
+  - **YOLOv11n**: Latest nano model (fastest)
+  - **YOLOv11s**: Small model (balanced)
+  - **YOLOv11m**: Medium model (balanced)
+  - **YOLOv11l**: Large model (higher accuracy)
+  - **YOLOv11x**: XLarge model (highest accuracy)
 
 #### 2. **SECONDARY DETECTION: RT-DETR (Optional Transformer-based)**
 - **Performance:** 54.8 mAP, 74 FPS on T4 GPU

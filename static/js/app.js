@@ -101,9 +101,17 @@ function initializeSocket() {
         if (statusElement) {
             let actualModelDisplay = data.actual_model.toUpperCase();
             if (data.actual_model === 'yolov11m') {
-                actualModelDisplay = 'YOLOv11m (Latest)';
-            } else if (data.actual_model === 'yolov8') {
-                actualModelDisplay = 'YOLOv8';
+                actualModelDisplay = 'YOLOv11m (Medium)';
+            } else if (data.actual_model === 'yolov11l') {
+                actualModelDisplay = 'YOLOv11l (Large)';
+            } else if (data.actual_model === 'yolov11x') {
+                actualModelDisplay = 'YOLOv11x (X Large)';
+            } else if (data.actual_model === 'yolov11n') {
+                actualModelDisplay = 'YOLOv11n (Nano)';
+            } else if (data.actual_model === 'yolov11s') {
+                actualModelDisplay = 'YOLOv11s (Small)';
+            } else if (data.actual_model === 'yolov8n') {
+                actualModelDisplay = 'YOLOv8n';
             }
             
             statusElement.innerHTML = `🤖 Models: Ready | 👥 ${actualModelDisplay} (Fallback) + 👤 MediaPipe (Fast)`;
@@ -859,9 +867,17 @@ function updateModelStatus() {
     if (statusElement) {
         let personModelDisplay = models.person_model.toUpperCase();
         if (models.person_model === 'yolov11m') {
-            personModelDisplay = 'YOLOv11m (Latest)';
-        } else if (models.person_model === 'yolov8') {
-            personModelDisplay = 'YOLOv8';
+            personModelDisplay = 'YOLOv11m (Medium)';
+        } else if (models.person_model === 'yolov11l') {
+            personModelDisplay = 'YOLOv11l (Large)';
+        } else if (models.person_model === 'yolov11x') {
+            personModelDisplay = 'YOLOv11x (X Large)';
+        } else if (models.person_model === 'yolov11n') {
+            personModelDisplay = 'YOLOv11n (Nano)';
+        } else if (models.person_model === 'yolov11s') {
+            personModelDisplay = 'YOLOv11s (Small)';
+        } else if (models.person_model === 'yolov8n') {
+            personModelDisplay = 'YOLOv8n';
         }
         
         let faceModelDisplay = models.face_model.toUpperCase();

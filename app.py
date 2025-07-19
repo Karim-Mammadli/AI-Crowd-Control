@@ -86,7 +86,7 @@ class CrowdMonitoringSystem:
         }
         
         # Current model selections
-        self.current_person_model = 'yolov8'
+        self.current_person_model = 'yolov8n'
         self.current_face_model = 'insightface'
     
     def update_progress(self, step, total, message):
@@ -100,7 +100,7 @@ class CrowdMonitoringSystem:
         })
         print(f"📊 Progress: {progress}% - {message}")
     
-    def initialize_models(self, person_model='yolov8', face_model='insightface', need_video_processor=False):
+    def initialize_models(self, person_model='yolov8n', face_model='insightface', need_video_processor=False):
         """Initialize AI models with progress tracking."""
         if self.is_initializing:
             print("⚠️ Models already initializing, skipping...")
@@ -190,7 +190,7 @@ class CrowdMonitoringSystem:
     
    
  
-    def process_image(self, image_path, person_model='yolov8', face_model='mediapipe'):
+    def process_image(self, image_path, person_model='yolov8n', face_model='mediapipe'):
         """Process a single image and return results."""
         # Initialize models with selected types (no video processor needed for images)
         if not self.initialize_models(person_model, face_model, need_video_processor=False):
@@ -298,7 +298,7 @@ class CrowdMonitoringSystem:
             print(f"❌ Image processing error: {e}")
             return {'success': False, 'message': str(e)}
     
-    def process_video(self, video_path, person_model='yolov8', face_model='mediapipe'):
+    def process_video(self, video_path, person_model='yolov8n', face_model='mediapipe'):
         """Process video and emit real-time updates."""
         # Initialize models with selected types (video processor needed for video processing)
         if not self.initialize_models(person_model, face_model, need_video_processor=True):
@@ -484,7 +484,7 @@ def upload_image():
             return jsonify({'success': False, 'message': 'Invalid file type. Use JPG, PNG, BMP, or WEBP'})
         
         # Get model selection parameters
-        person_model = request.form.get('person_model', 'yolov8')
+        person_model = request.form.get('person_model', 'yolov8n')
         face_model = request.form.get('face_model', 'insightface')
         
         print(f"🤖 Model selection - Person: {person_model}, Face: {face_model}")
@@ -531,7 +531,7 @@ def upload_video():
             return jsonify({'success': False, 'message': 'Invalid file type. Use MP4, AVI, MOV, MKV, or WEBM'})
         
         # Get model selection parameters
-        person_model = request.form.get('person_model', 'yolov8')
+        person_model = request.form.get('person_model', 'yolov8n')
         face_model = request.form.get('face_model', 'insightface')
         
         print(f"🤖 Model selection - Person: {person_model}, Face: {face_model}")
@@ -594,7 +594,7 @@ def serve_processed_image(filename):
 @socketio.on('start_video_processing')
 def handle_start_video_processing(data):
     video_path = data.get('file_path')
-    person_model = data.get('person_model', 'yolov8')
+    person_model = data.get('person_model', 'yolov8n')
     face_model = data.get('face_model', 'insightface')
     
     print(f"📨 Starting video processing: {video_path} with {person_model.upper()} + {face_model.upper()}")

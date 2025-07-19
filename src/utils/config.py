@@ -15,6 +15,26 @@ MODEL_CONFIG = {
             'model_path': 'yolo11m.pt',  # Path to YOLOv11m model file (actual filename in project)
             'confidence_threshold': 0.2,   # Confidence threshold for person detection
         },
+        # YOLOv11l specific settings
+        'yolov11l': {
+            'model_path': 'yolo11l.pt',  # Path to YOLOv11l model file
+            'confidence_threshold': 0.2,   # Confidence threshold for person detection
+        },
+        # YOLOv11x specific settings
+        'yolov11x': {
+            'model_path': 'yolo11x.pt',  # Path to YOLOv11x model file
+            'confidence_threshold': 0.2,   # Confidence threshold for person detection
+        },
+        # YOLOv11n specific settings
+        'yolov11n': {
+            'model_path': 'yolo11n.pt',  # Path to YOLOv11n model file
+            'confidence_threshold': 0.2,   # Confidence threshold for person detection
+        },
+        # YOLOv11s specific settings
+        'yolov11s': {
+            'model_path': 'yolo11s.pt',  # Path to YOLOv11s model file
+            'confidence_threshold': 0.2,   # Confidence threshold for person detection
+        },
     },
     
     # Face Detection Settings

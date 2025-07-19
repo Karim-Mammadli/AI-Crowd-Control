@@ -121,10 +121,30 @@ class YOLODetector:
                 print(f"🚀 Loading YOLOv11m model: {model_path}")
                 if not os.path.exists(model_path):
                     raise FileNotFoundError(f"YOLOv11m model not found at {model_path}")
-            elif model_name == 'yolov8':
-                # Use default YOLOv8 model
+            elif model_name == 'yolov11l':
+                model_path = MODEL_CONFIG['yolo']['yolov11l']['model_path']
+                print(f"🚀 Loading YOLOv11l model: {model_path}")
+                if not os.path.exists(model_path):
+                    raise FileNotFoundError(f"YOLOv11l model not found at {model_path}")
+            elif model_name == 'yolov11x':
+                model_path = MODEL_CONFIG['yolo']['yolov11x']['model_path']
+                print(f"🚀 Loading YOLOv11x model: {model_path}")
+                if not os.path.exists(model_path):
+                    raise FileNotFoundError(f"YOLOv11x model not found at {model_path}")
+            elif model_name == 'yolov11n':
+                model_path = MODEL_CONFIG['yolo']['yolov11n']['model_path']
+                print(f"🚀 Loading YOLOv11n model: {model_path}")
+                if not os.path.exists(model_path):
+                    raise FileNotFoundError(f"YOLOv11n model not found at {model_path}")
+            elif model_name == 'yolov11s':
+                model_path = MODEL_CONFIG['yolo']['yolov11s']['model_path']
+                print(f"🚀 Loading YOLOv11s model: {model_path}")
+                if not os.path.exists(model_path):
+                    raise FileNotFoundError(f"YOLOv11s model not found at {model_path}")
+            elif model_name == 'yolov8n':
+                # Use default YOLOv8n model
                 model_path = MODEL_CONFIG['yolo']['model_path']
-                print(f"🚀 Loading YOLOv8 model: {model_path}")
+                print(f"🚀 Loading YOLOv8n model: {model_path}")
             else:
                 # Use provided model name directly
                 model_path = model_name
@@ -143,13 +163,13 @@ class YOLODetector:
                     print(f"✅ Model downloaded and loaded successfully")
                 except Exception as download_error:
                     print(f"❌ Failed to download model: {download_error}")
-                    # Fallback to YOLOv8 if YOLOv11m fails
-                    if model_name == 'yolov11m':
-                        print(f"🔄 Falling back to YOLOv8 model...")
+                    # Fallback to YOLOv8n if YOLOv11 models fail
+                    if model_name in ['yolov11m', 'yolov11l', 'yolov11x', 'yolov11n', 'yolov11s']:
+                        print(f"🔄 Falling back to YOLOv8n model...")
                         fallback_path = MODEL_CONFIG['yolo']['model_path']
                         self.model = YOLO(fallback_path)
-                        self.model_name = 'yolov8'  # Update model name to reflect fallback
-                        print(f"✅ Fallback to YOLOv8 successful")
+                        self.model_name = 'yolov8n'  # Update model name to reflect fallback
+                        print(f"✅ Fallback to YOLOv8n successful")
                     else:
                         raise download_error
             
@@ -174,9 +194,21 @@ class YOLODetector:
             if hasattr(self, 'model_name') and self.model_name == 'yolov11m':
                 conf_threshold = MODEL_CONFIG['yolo']['yolov11m']['confidence_threshold']
                 print(f"⚙️ Using YOLOv11m confidence threshold: {conf_threshold}")
+            elif hasattr(self, 'model_name') and self.model_name == 'yolov11l':
+                conf_threshold = MODEL_CONFIG['yolo']['yolov11l']['confidence_threshold']
+                print(f"⚙️ Using YOLOv11l confidence threshold: {conf_threshold}")
+            elif hasattr(self, 'model_name') and self.model_name == 'yolov11x':
+                conf_threshold = MODEL_CONFIG['yolo']['yolov11x']['confidence_threshold']
+                print(f"⚙️ Using YOLOv11x confidence threshold: {conf_threshold}")
+            elif hasattr(self, 'model_name') and self.model_name == 'yolov11n':
+                conf_threshold = MODEL_CONFIG['yolo']['yolov11n']['confidence_threshold']
+                print(f"⚙️ Using YOLOv11n confidence threshold: {conf_threshold}")
+            elif hasattr(self, 'model_name') and self.model_name == 'yolov11s':
+                conf_threshold = MODEL_CONFIG['yolo']['yolov11s']['confidence_threshold']
+                print(f"⚙️ Using YOLOv11s confidence threshold: {conf_threshold}")
             else:
                 conf_threshold = MODEL_CONFIG['yolo']['confidence_threshold']
-                print(f"⚙️ Using YOLOv8 confidence threshold: {conf_threshold}")
+                print(f"⚙️ Using YOLOv8n confidence threshold: {conf_threshold}")
             
             # Run detection with specific parameters
             results = self.model(
@@ -247,11 +279,25 @@ class YOLODetector:
 
     def get_model_info(self):
         """Get information about the current model."""
+        # Get confidence threshold based on model type
+        if self.model_name == 'yolov11m':
+            conf_threshold = MODEL_CONFIG['yolo']['yolov11m']['confidence_threshold']
+        elif self.model_name == 'yolov11l':
+            conf_threshold = MODEL_CONFIG['yolo']['yolov11l']['confidence_threshold']
+        elif self.model_name == 'yolov11x':
+            conf_threshold = MODEL_CONFIG['yolo']['yolov11x']['confidence_threshold']
+        elif self.model_name == 'yolov11n':
+            conf_threshold = MODEL_CONFIG['yolo']['yolov11n']['confidence_threshold']
+        elif self.model_name == 'yolov11s':
+            conf_threshold = MODEL_CONFIG['yolo']['yolov11s']['confidence_threshold']
+        else:
+            conf_threshold = MODEL_CONFIG['yolo']['confidence_threshold']
+        
         info = {
             'model_name': self.model_name,
             'device': self.device,
             'model_path': getattr(self.model, 'ckpt_path', 'Unknown'),
-            'confidence_threshold': MODEL_CONFIG['yolo']['yolov11m']['confidence_threshold'] if self.model_name == 'yolov11m' else MODEL_CONFIG['yolo']['confidence_threshold']
+            'confidence_threshold': conf_threshold
         }
         return info
     
@@ -263,6 +309,23 @@ class YOLODetector:
         print(f"   🔧 Device: {info['device']}")
         print(f"   📁 Model Path: {info['model_path']}")
         print(f"   ⚙️ Confidence Threshold: {info['confidence_threshold']}")
-        print(f"   🎯 Model Type: {'YOLOv11m (Latest)' if info['model_name'] == 'yolov11m' else 'YOLOv8 (Recommended)'}")
+        
+        # Determine model type description
+        if info['model_name'] == 'yolov11m':
+            model_type = 'YOLOv11m (Medium)'
+        elif info['model_name'] == 'yolov11l':
+            model_type = 'YOLOv11l (Large)'
+        elif info['model_name'] == 'yolov11x':
+            model_type = 'YOLOv11x (X Large)'
+        elif info['model_name'] == 'yolov11n':
+            model_type = 'YOLOv11n (Nano)'
+        elif info['model_name'] == 'yolov11s':
+            model_type = 'YOLOv11s (Small)'
+        elif info['model_name'] == 'yolov8n':
+            model_type = 'YOLOv8n (Popular)'
+        else:
+            model_type = 'Custom Model'
+        
+        print(f"   🎯 Model Type: {model_type}")
 
 # face_detector = YOLOFaceDetector()  # This will use yolov8n.pt which is available for download
