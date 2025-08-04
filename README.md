@@ -41,7 +41,7 @@
 cd AI-Crowd-Control
 
 # Create virtual environment
-python -m venv venv
+py -m venv venv
 
 # Activate virtual environment
 # Windows:
@@ -56,7 +56,7 @@ pip install -r requirements.txt
 ### Step 2: run
 ```bash
 #be sure to be in venv
-python app.py
+py app.py
 ```
 
 
